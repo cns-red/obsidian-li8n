@@ -1,76 +1,17 @@
 /**
- * markdownProcessor.ts
+ * Reading-mode post-processor.
  *
- * Reading-mode post-processor for the Multilingual Notes plugin.
- *
- * Root cause of the "everything renders" bug:
- *   Obsidian calls registerMarkdownPostProcessor() ONCE PER RENDERED ELEMENT
- *   (paragraph, heading, list, …), NOT for the whole document at once.
- *   The old approach of walking el.childNodes to find open/close pairs
- *   therefore never worked — each `el` is just one paragraph.
- *
- * Fix:
- *   Use ctx.getSectionInfo(el) which returns:
- *     • text       – the FULL raw source of the note
- *     • lineStart  – 0-based first source line of this rendered element
- *     • lineEnd    – 0-based last  source line of this rendered element
- *   We parse the full source once (cached) to locate all lang blocks,
- *   then for each element decide: hide, show, or replace with badge.
- *
- * Supported syntax (all equivalent):
- *   :::lang zh-cn          …  :::
- *   {% i8n zh-cn %}        …  {% endi8n %}
- *   [//]: # (:::lang zh-cn)…  [//]: # (:::)
- *   %% :::lang zh-cn %%   …  %% ::: %%
- *
- * Feature — no-marker fallback:
- *   If a note contains NONE of the above markers it is treated as being
- *   written entirely in the plugin's configured "default language".
- *   Switching to a different language makes the whole note invisible.
+ * Obsidian invokes post-processors per rendered element, not once per file.
+ * We therefore parse the full source via ctx.getSectionInfo(el) and decide
+ * per element whether to show or hide it for the active language.
  */
+
 
 import { MarkdownPostProcessorContext } from "obsidian";
 import type MultilingualNotesPlugin from "../main";
+import { isLanguageBlockClose, matchLanguageBlockOpen } from "./syntax";
 
-// ── Syntax patterns ──────────────────────────────────────────────────────────
-
-interface SyntaxPattern {
-  re: RegExp;
-  /**
-   * True  → the marker line renders as visible text in Obsidian reading mode
-   *         (e.g. :::lang en  or  {% i8n en %}).
-   *         We must explicitly hide it.
-   * False → the marker is already invisible (Obsidian comment / link-ref hack).
-   *         No action needed.
-   */
-  visible: boolean;
-}
-
-/**
- * Capture groups are unified into one or multiple language codes,
- * separated by spaces, such as "zh-CN" or "zh-CN en"
- */
-const LANG_CODE_PART = `([\\w-]+(?:\\s+[\\w-]+)*)`;
-
-/** Open-block markers. Capture group 1 = language code. */
-const OPEN_PATTERNS: RegExp[] = [
-  // :::lang zh-CN  或  :::lang zh-CN en
-  new RegExp(`^:::lang\\s+${LANG_CODE_PART}\\s*$`),
-  // {% i8n zh-CN %}  或  {% i8n zh-CN en %}
-  new RegExp(`^\\{%\\s*i8n\\s+${LANG_CODE_PART}\\s*%\\}\\s*$`),
-  // [//]: # (lang zh-CN)  或  [//]: # (lang zh-CN en)
-  new RegExp(`^\\[//\\]:\\s*#\\s*\\(lang\\s+${LANG_CODE_PART}\\)\\s*$`),
-  // %% lang zh-CN %%  或  %% lang zh-CN en %%
-  new RegExp(`^%%\\s+lang\\s+${LANG_CODE_PART}\\s+%%\\s*$`),
-];
-
-/** Close-block markers. */
-const CLOSE_PATTERNS: RegExp[] = [
-  /^:::\s*$/,                             // :::
-  /^\{%\s*endlang\s*%\}\s*$/,            // {% endlang %}
-  /^\[\/\/\]:\s*#\s*\(\s*endlang\s*\)\s*$/, // [//]: # (endlang)
-  /^%%\s+endlang\s+%%\s*$/,              // %% endlang %%
-];
+// ── Marker parsing uses shared helpers in src/syntax.ts ────────────────
 
 // ── Internal data ────────────────────────────────────────────────────────────
 
@@ -84,6 +25,14 @@ export interface LangBlock {
   closeLine: number;
   /** Whether the close marker renders visibly. */
   closeVisible: boolean;
+}
+
+function isVisibleMarkerLine(line: string): boolean {
+  const text = line.trim();
+  // Obsidian comment and markdown link-reference hacks are not rendered.
+  if (/^\[\/\/\]:\s*#\s*\(/.test(text)) return false;
+  if (/^%%.*%%$/.test(text)) return false;
+  return true;
 }
 
 // ── Cache ─────────────────────────────────────────────────────────────────────
@@ -110,22 +59,11 @@ export function clearBlockCache(): void {
  */
 export function langMatch(blockLang: string, active: string): boolean {
   if (active === "ALL") return true;
-  return blockLang.split(/\s+/).some(code => code === active);
+  const activeNorm = active.toLowerCase();
+  return blockLang.split(/\s+/).some((code) => code.toLowerCase() === activeNorm);
 }
 
 // ── Parsing ───────────────────────────────────────────────────────────────────
-
-function matchOpen(line: string): string | null {
-  for (const re of OPEN_PATTERNS) {
-    const m = re.exec(line);
-    if (m) return m[1].trim();
-  }
-  return null;
-}
-
-function matchClose(line: string): boolean {
-  return CLOSE_PATTERNS.some(re => re.test(line));
-}
 
 export function parseLangBlocks(source: string): LangBlock[] {
   const lines = source.split("\n");
@@ -136,18 +74,18 @@ export function parseLangBlocks(source: string): LangBlock[] {
     const line = lines[i];
 
     if (openBlock === null) {
-      const code = matchOpen(line);
+      const code = matchLanguageBlockOpen(line);
       if (code !== null) {
         openBlock = { langCode: code, openLine: i };
       }
     } else {
-      if (matchClose(line)) {
+      if (isLanguageBlockClose(line)) {
         blocks.push({
           langCode: openBlock.langCode,
           openLine: openBlock.openLine,
           closeLine: i,
-          openVisible: true,
-          closeVisible: true,
+          openVisible: isVisibleMarkerLine(lines[openBlock.openLine]),
+          closeVisible: isVisibleMarkerLine(line),
         });
         openBlock = null;
       }
@@ -158,7 +96,7 @@ export function parseLangBlocks(source: string): LangBlock[] {
     blocks.push({
       langCode: openBlock.langCode,
       openLine: openBlock.openLine,
-      openVisible: true,
+      openVisible: isVisibleMarkerLine(lines[openBlock.openLine]),
       closeVisible: true,
       closeLine: -1,
     });
@@ -269,8 +207,8 @@ export function registerReadingModeProcessor(plugin: MultilingualNotesPlugin): v
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 /**
- * 从已渲染的 HTMLElement 里剥离闭标记文本。
- * 兼容 p / blockquote / h1-h6 / li / td 等所有块级元素。
+ * Remove rendered close-marker text from mixed-content elements.
+ * Handles paragraphs, blockquotes, headings, list items, and table cells.
  */
 function removeCloseMarkerFromElement(el: HTMLElement): void {
   const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
@@ -279,7 +217,7 @@ function removeCloseMarkerFromElement(el: HTMLElement): void {
   let node: Node | null;
   while ((node = walker.nextNode())) {
     const text = node.textContent?.trim() ?? "";
-    if (matchClose(text)) {
+    if (isLanguageBlockClose(text)) {
       toRemove.push(node);
     }
   }
@@ -298,7 +236,7 @@ function removeCloseMarkerFromElement(el: HTMLElement): void {
     }
   }
 
-  // 如果整个 el 现在是空的，也隐藏它
+  // Hide the wrapper if removing the marker leaves no visible text.
   if (el.textContent?.trim() === "") {
     el.style.display = "none";
   }
@@ -315,6 +253,3 @@ function createBadge(langCode: string, plugin: MultilingualNotesPlugin): HTMLEle
   badge.setAttribute("data-lang", langCode);
   return badge;
 }
-
-// Export regex utilities so editorExtension can reuse them.
-export { matchOpen, matchClose };

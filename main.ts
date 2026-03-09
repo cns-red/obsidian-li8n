@@ -97,11 +97,7 @@ export default class MultilingualNotesPlugin extends Plugin {
       })
     );
 
-    // 9. Bug fix (Bug 2 / Bug 4): clear the reading-mode block cache and
-    //    re-render every time the workspace layout changes (which includes
-    //    switching between reading mode and editing mode).  Without this, a
-    //    stale cache entry from the previous mode is reused and the wrong
-    //    language content is shown (or hidden) after a mode switch.
+    // Ensure cached block parsing never leaks across layout/mode switches.
     this.registerEvent(
       this.app.workspace.on("layout-change", () => {
         clearBlockCache();
@@ -152,9 +148,7 @@ export default class MultilingualNotesPlugin extends Plugin {
         const mode = view.getMode();
         if (mode === "preview") {
           // Reading mode: trigger re-render via previewMode only.
-          // Bug fix: do NOT access view.editor here — doing so in preview mode
-          // causes Obsidian to initialise the CM editor, which forces a switch
-          // back to edit mode (Bug 1 / Bug 4).
+          // Never touch view.editor in preview mode; it can force a mode switch.
           (view as any).previewMode?.rerender(true);
         } else {
           // Live-preview / source mode: push CM6 state effect.
@@ -275,10 +269,7 @@ export default class MultilingualNotesPlugin extends Plugin {
     label.setAttribute("title", t("status_bar.click_to_switch"));
     label.style.cursor = "pointer";
 
-    // Bug fix (Bug 3): using .onclick assignment instead of addEventListener
-    // prevents duplicate click handlers from accumulating every time
-    // buildStatusBar() is called (on init, on language switch, on frontmatter
-    // override, etc.).
+    // Use direct onclick assignment to avoid duplicate handlers on rebuilds.
     this.statusBarEl.onclick = (e: MouseEvent) => {
       this.showLanguageMenu(e);
     };
@@ -391,10 +382,13 @@ export default class MultilingualNotesPlugin extends Plugin {
 
   // ─── Editor helpers ────────────────────────────────────────────────────
 
+  private getInsertionLanguageCode(): string {
+    if (this.settings.activeLanguage !== "ALL") return this.settings.activeLanguage;
+    return this.settings.languages[0]?.code ?? "en";
+  }
+
   private insertLangBlock(editor: Editor): void {
-    const active = this.settings.activeLanguage === "ALL"
-      ? (this.settings.languages[0]?.code ?? "en")
-      : this.settings.activeLanguage;
+    const active = this.getInsertionLanguageCode();
 
     const snippet = `[//]: # (lang ${active})\n\n[//]: # (endlang)`;
     const cursor = editor.getCursor();
@@ -408,9 +402,7 @@ export default class MultilingualNotesPlugin extends Plugin {
       new Notice(t("notice.select_text_first"));
       return;
     }
-    const active = this.settings.activeLanguage === "ALL"
-      ? (this.settings.languages[0]?.code ?? "en")
-      : this.settings.activeLanguage;
+    const active = this.getInsertionLanguageCode();
 
     editor.replaceSelection(`[//]: # (lang ${active})\n${selection}\n\n[//]: # (endlang)`);
   }
@@ -524,7 +516,7 @@ export default class MultilingualNotesPlugin extends Plugin {
     const existing = new Set<string>();
 
     for (const block of blocks) {
-      // 支持多语言码（空格分隔）
+      // Support multi-code blocks separated by spaces.
       const codes = block.langCode.split(/\s+/);
       codes.forEach(code => existing.add(code));
     }
@@ -591,10 +583,7 @@ export default class MultilingualNotesPlugin extends Plugin {
       this.settings.activeLanguage = langOverride;
       this.buildStatusBar();
       // Refresh only the current leaf.
-      // Bug fix (Bug 1): guard view.editor access behind a mode check.
-      // Accessing view.editor in preview mode causes Obsidian to initialise
-      // the CM editor internally, which silently switches the pane to edit
-      // mode — exactly the "reopen → forced into edit mode" symptom.
+      // Guard editor access by mode: preview rerenders via previewMode only.
       setTimeout(() => {
         const currentMode = view.getMode();
         if (currentMode === "preview") {

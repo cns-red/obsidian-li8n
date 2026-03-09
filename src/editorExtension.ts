@@ -7,14 +7,14 @@
  * Supported open-block syntax (same as markdownProcessor):
  *   :::lang zh-cn
  *   {% i8n zh-cn %}
- *   [//]: # (:::lang zh-cn)
- *   %% :::lang zh-cn %%
+ *   [//]: # (lang zh-cn)
+ *   %% lang zh-cn %%
  *
  * Supported close-block syntax:
  *   :::
  *   {% endi8n %}
- *   [//]: # (:::)
- *   %% ::: %%
+ *   [//]: # (endlang)
+ *   %% endlang %%
  */
 
 import {
@@ -32,6 +32,7 @@ import {
   EditorView,
   WidgetType,
 } from "@codemirror/view";
+import { isLanguageBlockClose, matchLanguageBlockOpen } from "./syntax";
 
 // ── Public API ────────────────────────────────────────────────────────────────
 
@@ -49,42 +50,7 @@ export function buildEditorExtension(config: LangExtensionConfig): Extension[] {
   return [langDecorationsField(config), hideTheme];
 }
 
-// ── Multi-syntax regex helpers ────────────────────────────────────────────────
-
-/** Returns the language code if the line is an open-block marker, else null. */
-function matchOpenLine(text: string): string | null {
-  const t = text.trim();
-  let m: RegExpMatchArray | null;
-
-  // :::lang zh-cn
-  m = t.match(/^:::lang\s+(\S+)\s*$/);
-  if (m) return m[1];
-
-  // {% i8n zh-cn %}
-  m = t.match(/^\{%-?\s*i8n\s+(\S+)\s*-?%\}$/i);
-  if (m) return m[1];
-
-  // [//]: # (lang zh-cn)
-  m = t.match(/^\[\/\/\]:\s*#\s*\(lang\s+(\S+)[^)]*\)/i);
-  if (m) return m[1];
-
-  // %% lang zh-cn %%
-  m = t.match(/^%%\s*lang\s+(\S+)\s*%%$/);
-  if (m) return m[1];
-
-  return null;
-}
-
-/** Returns true if the line is a close-block marker. */
-function isCloseLine(text: string): boolean {
-  const t = text.trim();
-  return (
-    /^:::\s*$/.test(t) ||
-    /^\{%-?\s*endi8n\s*-?%\}$/i.test(t) ||
-    /^\[\/\/\]:\s*#\s*\(:::\s*\)$/i.test(t) ||
-    /^%%\s*:::\s*%%$/.test(t)
-  );
-}
+// ── Marker parsing is shared in src/syntax.ts ─────────────────────────────
 
 // ── Collapsed widget (placeholder shown when a block is hidden) ───────────────
 
@@ -160,14 +126,14 @@ function computeDecorations(
     const text = line.text;
 
     if (!insideBlock) {
-      const langCode = matchOpenLine(text);
+      const langCode = matchLanguageBlockOpen(text);
       if (langCode !== null) {
         insideBlock    = true;
         blockLang      = langCode;
         blockStartLine = ln;
       }
     } else {
-      if (isCloseLine(text)) {
+      if (isLanguageBlockClose(text)) {
         // Complete block: blockStartLine … ln
         const blockLineCount = ln - blockStartLine + 1;
         // Case-insensitive: "zh-cn" in note matches "zh-CN" in settings
