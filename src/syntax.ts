@@ -44,7 +44,12 @@ export function isLanguageBlockClose(line: string): boolean {
  * Supports space-separated marker codes like "en zh-CN".
  */
 export function langMatch(blockLang: string, active: string): boolean {
-  if (active === "ALL") return true;
-  const activeNorm = active.toLowerCase();
-  return blockLang.split(/\s+/).some((code) => code.toLowerCase() === activeNorm);
+  const activeNorm = active.trim().toLowerCase();
+  if (activeNorm === "all") return true;
+
+  return blockLang
+    .split(/\s+/)
+    .map((code) => code.trim().toLowerCase())
+    .filter((code) => code.length > 0)
+    .some((code) => code === activeNorm);
 }
