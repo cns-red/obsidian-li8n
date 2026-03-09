@@ -1,18 +1,21 @@
 /**
- * Shared language-block syntax helpers used by both reading-mode and editor-mode.
- * Keep this file as the single source of truth for marker parsing.
+ * Shared language-block syntax helpers used by parser and editor commands.
+ * Keep this module as the single source of truth for markers and templates.
  */
 
+export const COMMENT_OPEN_PREFIX = "[//]: # (lang ";
+export const COMMENT_CLOSE_MARKER = "[//]: # (endlang)";
+
 /** Open-marker patterns. Capture group 1 contains one or more language codes. */
-const OPEN_PATTERNS: RegExp[] = [
+export const OPEN_PATTERNS: RegExp[] = [
   /^:::lang\s+([\w-]+(?:\s+[\w-]+)*)\s*$/,
   /^\{%-?\s*i8n\s+([\w-]+(?:\s+[\w-]+)*)\s*-?%\}$/i,
   /^\[\/\/\]:\s*#\s*\(lang\s+([\w-]+(?:\s+[\w-]+)*)\)\s*$/i,
   /^%%\s*lang\s+([\w-]+(?:\s+[\w-]+)*)\s*%%$/i,
 ];
 
-/** Close-marker patterns (accept canonical and legacy variants). */
-const CLOSE_PATTERNS: RegExp[] = [
+/** Close-marker patterns (canonical + legacy aliases). */
+export const CLOSE_PATTERNS: RegExp[] = [
   /^:::\s*$/,
   /^\{%-?\s*endi8n\s*-?%\}$/i,
   /^\{%-?\s*endlang\s*-?%\}$/i,
@@ -36,3 +39,12 @@ export function isLanguageBlockClose(line: string): boolean {
   return CLOSE_PATTERNS.some((re) => re.test(text));
 }
 
+export function buildCommentLangBlock(langCode: string, body = ""): string {
+  const content = body.length > 0 ? `\n${body}\n` : "\n\n";
+  return `${COMMENT_OPEN_PREFIX}${langCode})${content}${COMMENT_CLOSE_MARKER}`;
+}
+
+export function langCodeIncludes(blockLang: string, active: string): boolean {
+  const activeNorm = active.toLowerCase();
+  return blockLang.split(/\s+/).some((code) => code.toLowerCase() === activeNorm);
+}

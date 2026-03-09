@@ -106,3 +106,7 @@ Build output: `main.js` in repository root.
 ## License
 
 MIT
+
+## Architecture
+
+See [`docs/architecture.md`](docs/architecture.md) for module boundaries and parsing flow.

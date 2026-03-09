@@ -9,7 +9,7 @@
 
 import { MarkdownPostProcessorContext } from "obsidian";
 import type MultilingualNotesPlugin from "../main";
-import { isLanguageBlockClose, matchLanguageBlockOpen } from "./syntax";
+import { isLanguageBlockClose, langCodeIncludes, matchLanguageBlockOpen } from "./syntax";
 
 // ── Marker parsing uses shared helpers in src/syntax.ts ────────────────
 
@@ -59,8 +59,7 @@ export function clearBlockCache(): void {
  */
 export function langMatch(blockLang: string, active: string): boolean {
   if (active === "ALL") return true;
-  const activeNorm = active.toLowerCase();
-  return blockLang.split(/\s+/).some((code) => code.toLowerCase() === activeNorm);
+  return langCodeIncludes(blockLang, active);
 }
 
 // ── Parsing ───────────────────────────────────────────────────────────────────
@@ -148,11 +147,8 @@ export function registerReadingModeProcessor(plugin: MultilingualNotesPlugin): v
 
           const isActive = active === "ALL" || langMatch(block.langCode, active);
 
-          // When there is no blank line after the marker Obsidian's markdown
-          // parser merges the fence line with the following content lines into
-          // a single paragraph element (lineEnd > openLine).  In that case we
-          // must NOT clear innerHTML — doing so would eat the content.  Just
-          // show or hide the whole element based on active status.
+          // Guard merged paragraph nodes so marker cleanup never removes real content.
+          // Side effect: merged marker+content nodes are toggled as one element.
           if (lineEnd > block.openLine) {
             el.style.display = isActive ? "" : "none";
             return;
