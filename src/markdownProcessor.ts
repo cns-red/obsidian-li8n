@@ -240,12 +240,19 @@ function removeCloseMarkerFromElement(el: HTMLElement): void {
 
 
 function createBadge(langCode: string, plugin: MultilingualNotesPlugin): HTMLElement {
-  // Case-insensitive lookup so "zh-cn" finds the entry stored as "zh-CN"
-  const lang  = plugin.settings.languages.find((l) => langMatch(l.code, langCode));
-  const label = lang ? lang.label : langCode;
+  const normalized = langCode.trim();
+  const codes = normalized.split(/\s+/).filter(Boolean);
+  const labels = codes.map((code) => {
+    if (code.toLowerCase() === "all") return "ALL";
+
+    // Case-insensitive exact lookup so "zh-cn" finds configured "zh-CN".
+    const lang = plugin.settings.languages.find((l) => l.code.toLowerCase() === code.toLowerCase());
+    return lang ? lang.label : code;
+  });
+
   const badge = document.createElement("span");
   badge.className = "ml-lang-badge";
-  badge.textContent = label;
+  badge.textContent = labels.length > 0 ? labels.join(" · ") : normalized;
   badge.setAttribute("data-lang", langCode);
   return badge;
 }
