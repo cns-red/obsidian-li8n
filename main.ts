@@ -7,6 +7,7 @@ import {
   Notice,
   Plugin,
   WorkspaceLeaf,
+  TAbstractFile,
 } from "obsidian";
 
 import {
@@ -39,7 +40,7 @@ export default class MultilingualNotesPlugin extends Plugin {
   private statusBarEl!: HTMLElement;
   private ribbonEl!: HTMLElement;
   private languageRefreshToken = 0;
-  public leafLanguageOverrides = new WeakMap<WorkspaceLeaf, string>();
+  public leafLanguageOverrides = new WeakMap<WorkspaceLeaf, { code: string, filePath: string }>();
   public compareManager!: CompareManager;
 
   async onload(): Promise<void> {
@@ -72,6 +73,42 @@ export default class MultilingualNotesPlugin extends Plugin {
     this.registerEvent(
       this.app.workspace.on("editor-menu", (menu: Menu, editor: Editor) => {
         this.addEditorContextMenuItems(menu, editor);
+      })
+    );
+
+    this.registerEvent(
+      this.app.workspace.on("file-menu", (menu: Menu, file: TAbstractFile) => {
+        import("obsidian").then(({ TFile }) => {
+          if (file instanceof TFile && file.extension === "md") {
+            menu.addItem((item) => {
+              item.setTitle(t("menu.multilingual") || "Multilingual").setIcon("languages");
+              const submenu = (item as any).setSubmenu() as Menu;
+
+              submenu.addItem((exportItem) => {
+                exportItem.setTitle(t("menu.export") || "Export").setIcon("download");
+                const exportSubmenu = (exportItem as any).setSubmenu() as Menu;
+
+                for (const lang of this.settings.languages) {
+                  exportSubmenu.addItem((langItem) => {
+                    langItem.setTitle(lang.label);
+                    langItem.onClick(async () => {
+                      const content = await this.app.vault.read(file);
+                      const blocks = parseLangBlocks(content);
+                      const existing = new Set<string>();
+                      blocks.forEach(b => b.langCode.split(/\s+/).forEach(c => existing.add(c.toLowerCase())));
+
+                      if (!existing.has(lang.code.toLowerCase()) && existing.size > 0) {
+                        new Notice(`No ${lang.label} block found. Exporting shared content only.`);
+                      }
+                      const extracted = this.extractLanguageContent(content, lang.code);
+                      this.downloadAsFile(`${file.basename}-${lang.code}.md`, extracted);
+                    });
+                  });
+                }
+              });
+            });
+          }
+        });
       })
     );
 
@@ -130,7 +167,19 @@ export default class MultilingualNotesPlugin extends Plugin {
 
   getEffectiveLanguageForLeaf(leaf: WorkspaceLeaf | null): string {
     if (!leaf) return this.settings.activeLanguage;
-    return this.leafLanguageOverrides.get(leaf) ?? this.settings.activeLanguage;
+    const override = this.leafLanguageOverrides.get(leaf);
+
+    // If the leaf has navigated to a different file, ignore the override
+    if (override && leaf.view instanceof MarkdownView && leaf.view.file) {
+      if (override.filePath === leaf.view.file.path) {
+        return override.code;
+      }
+    } else if (override && (!leaf.view || !(leaf.view instanceof MarkdownView))) {
+      // Keep it if it's not a markdown file/fully loaded yet, it might still be loading
+      return override.code;
+    }
+
+    return this.settings.activeLanguage;
   }
 
   getEffectiveLanguageForActiveLeaf(): string {
@@ -196,7 +245,15 @@ export default class MultilingualNotesPlugin extends Plugin {
 
   async setLanguageForSpecificLeaf(leaf: WorkspaceLeaf, code: string): Promise<void> {
     const resolvedCode = this.resolveLanguageCode(code);
-    this.leafLanguageOverrides.set(leaf, resolvedCode);
+    const view = leaf.view;
+    let filePath = "";
+    if (view instanceof MarkdownView && view.file) {
+      filePath = view.file.path;
+    } else if ((view as any)?.file?.path) {
+      filePath = (view as any).file.path;
+    }
+
+    this.leafLanguageOverrides.set(leaf, { code: resolvedCode, filePath });
 
     // Immediately force all UI pills inside this leaf to visually update.
     // This bypasses Obsidian's async chunk caching mechanics which may drop detached chunks.
@@ -472,9 +529,12 @@ export default class MultilingualNotesPlugin extends Plugin {
 
   private async cycleLanguage(): Promise<void> {
     const codes = this.settings.languages.map((l) => l.code);
-    const idx = codes.indexOf(this.settings.activeLanguage);
+    const currentLang = this.getEffectiveLanguageForActiveLeaf();
+    const idx = codes.findIndex((c) => c.toLowerCase() === currentLang.toLowerCase());
     const next = idx === -1 || idx === codes.length - 1 ? codes[0] : codes[idx + 1];
-    await this.setActiveLanguage(next);
+
+    await this.setLanguageForActiveLeaf(next);
+
     const label = this.settings.languages.find((l) => l.code === next)?.label ?? next;
     new Notice(t("notice.current_language", { label }));
   }
@@ -493,11 +553,37 @@ export default class MultilingualNotesPlugin extends Plugin {
       });
 
       submenu.addItem((subItem) => {
-        subItem.setTitle(t("menu.smart_translate")).setIcon("bot").onClick(() => this.openTranslationModal(editor));
+        subItem.setTitle(t("menu.smart_translate") || "Smart Translation").setIcon("bot").onClick(() => this.openTranslationModal(editor));
       });
 
       submenu.addItem((subItem) => {
-        subItem.setTitle(t("menu.smart_insert")).setIcon("sparkles").onClick(() => this.smartInsertLanguageBlock(editor));
+        subItem.setTitle(t("menu.copy") || "Copy").setIcon("copy");
+        const copySubmenu = (subItem as any).setSubmenu() as Menu;
+        const existingLanguages = this.detectExistingLanguages(editor);
+
+        if (existingLanguages.size === 0) {
+          copySubmenu.addItem((langItem) => {
+            langItem.setTitle(t("notice.fully_internationalized") || "No language blocks");
+            langItem.setDisabled(true);
+          });
+        } else {
+          for (const langCode of Array.from(existingLanguages)) {
+            const lang = this.settings.languages.find(l => l.code.toLowerCase() === langCode) || { label: langCode, code: langCode };
+            copySubmenu.addItem((langItem) => {
+              langItem.setTitle(lang.label);
+              langItem.onClick(() => {
+                const extracted = this.extractLanguageContent(editor.getValue(), lang.code);
+                navigator.clipboard.writeText(extracted).then(() => {
+                  new Notice((t("notice.copied") || "Copied!") + ` (${lang.label})`);
+                });
+              });
+            });
+          }
+        }
+      });
+
+      submenu.addItem((subItem) => {
+        subItem.setTitle(t("menu.smart_insert") || "Smart Insert").setIcon("sparkles").onClick(() => this.smartInsertLanguageBlock(editor));
       });
 
       submenu.addItem((subItem) => {
@@ -538,6 +624,52 @@ export default class MultilingualNotesPlugin extends Plugin {
         insertItem.after(ourItem);
       }
     }, 0);
+  }
+
+  public extractLanguageContent(source: string, targetLangCode: string): string {
+    const blocks = parseLangBlocks(source);
+    if (blocks.length === 0) return source;
+
+    let result = "";
+    let cursor = 0;
+
+    // langMatch uses the same logic as markdownProcessor, import not direct but we can inline it here or import it 
+    // Wait, parseLangBlocks already gives us the exact bounds. Let's define langMatch locally just in case.
+    const langMatch = (blockLangs: string, target: string) => {
+      const lowerTarget = target.toLowerCase();
+      return blockLangs.split(/\s+/).some((code) => code.toLowerCase() === lowerTarget);
+    };
+
+    for (const block of blocks) {
+      if (block.start > cursor) {
+        result += source.slice(cursor, block.start);
+      }
+
+      if (langMatch(block.langCode, targetLangCode)) {
+        result += source.slice(block.innerStart, block.innerEnd);
+      }
+
+      cursor = block.end;
+    }
+
+    if (cursor < source.length) {
+      result += source.slice(cursor);
+    }
+
+    return result;
+  }
+
+  private downloadAsFile(filename: string, content: string): void {
+    const blob = new Blob([content], { type: "text/markdown;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.style.display = "none";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   }
 
   private detectExistingLanguages(editor: Editor): Set<string> {
@@ -617,7 +749,7 @@ export default class MultilingualNotesPlugin extends Plugin {
     );
     if (!resolved || !resolved.view.file) return;
 
-    this.leafLanguageOverrides.set(leaf, this.resolveLanguageCode(resolved.lang));
+    this.leafLanguageOverrides.set(leaf, { code: this.resolveLanguageCode(resolved.lang), filePath: resolved.view.file.path });
     this.refreshStatusBar();
     // Guard by mode so preview refresh never touches editor APIs.
     // Side effect: only the current leaf is refreshed during override application.

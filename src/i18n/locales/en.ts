@@ -18,6 +18,8 @@ const en = {
     compare_languages_desc: "Select multiple languages to open side-by-side synchronized views.",
     apply_comparison: "Apply Split View",
     return_normal: "Return to Normal Mode",
+    copy: "Copy",
+    export: "Export",
   },
   command: {
     switch_language: "Switch language: {label}",
@@ -38,6 +40,7 @@ const en = {
     keep_one_language: "You must keep at least one language.",
     api_key_missing: "API Key is not configured. Please go to settings first.",
     empty_insertion: "Cannot insert empty text.",
+    copied: "Copied!",
   },
   settings: {
     title: "i8n — Settings",
@@ -115,6 +118,11 @@ const en = {
   },
   label: {
     preview_edit: "Preview & Edit Text",
+    source_text: "Source Text",
+    translation: "Translation",
+  },
+  tooltip: {
+    edit_translation: "Toggle Edit Translation",
   },
   placeholder: {
     translation_preview: "Click Translate to generate text. You can edit the result here before inserting.",

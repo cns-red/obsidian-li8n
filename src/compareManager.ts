@@ -3,6 +3,8 @@ import type MultilingualNotesPlugin from "../main";
 
 export class CompareManager {
     private activeComparisonLeaves = new Set<WorkspaceLeaf>();
+    /** Language active on the primary leaf before the comparison session began. */
+    private preComparisonLanguage: string | null = null;
 
     /**
      * True while startOrUpdateComparison() is actively constructing splits.
@@ -38,6 +40,9 @@ export class CompareManager {
         if (this.activeComparisonLeaves.has(primaryLeaf)) {
             const leavesArray = Array.from(this.activeComparisonLeaves);
             actualPrimary = leavesArray[0];
+        } else {
+            // New comparison session, save the primary leaf's language
+            this.preComparisonLanguage = this.plugin.getEffectiveLanguageForLeaf(actualPrimary);
         }
 
         // Suppress layout-change → refreshAllViews() during the entire setup
@@ -45,7 +50,7 @@ export class CompareManager {
         this.isSettingUp = true;
         try {
             // Clear and clean up any existing comparison session
-            this.endComparison();
+            this.endComparison(false);
 
             this.activeComparisonLeaves.add(actualPrimary);
 
@@ -77,7 +82,10 @@ export class CompareManager {
                 const resolvedLang = lang !== "ALL"
                     ? this.plugin.settings.languages.find(l => l.code.toLowerCase() === lang.toLowerCase())?.code ?? lang
                     : "ALL";
-                this.plugin.leafLanguageOverrides.set(newLeaf, resolvedLang);
+
+                // When we spawn the leaf, its view isn't fully set up with a file yet. We'll set the initial override without a filepath
+                // and it will get updated appropriately later.
+                this.plugin.leafLanguageOverrides.set(newLeaf, { code: resolvedLang, filePath: file.path });
 
                 // Hint for post-processors that run during the synchronous portion
                 // of openFile() while elements are still detached from the DOM.
@@ -113,7 +121,8 @@ export class CompareManager {
         this.removeScrollSync();
 
         if (returnToAllMode && primaryLeaf) {
-            this.plugin.setLanguageForSpecificLeaf(primaryLeaf, "ALL");
+            const restoreLang = this.preComparisonLanguage || "ALL";
+            this.plugin.setLanguageForSpecificLeaf(primaryLeaf, restoreLang);
             this.app.workspace.setActiveLeaf(primaryLeaf, { focus: true });
         }
     }

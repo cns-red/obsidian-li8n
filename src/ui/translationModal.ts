@@ -1,4 +1,4 @@
-import { App, Modal, Setting, TextAreaComponent, Notice, ButtonComponent, DropdownComponent } from "obsidian";
+import { App, Modal, Setting, TextAreaComponent, Notice, ButtonComponent, DropdownComponent, MarkdownRenderer } from "obsidian";
 import MultilingualNotesPlugin from "../../main";
 import { t } from "../i18n";
 import { streamTranslation } from "../api/ai";
@@ -13,8 +13,13 @@ export class TranslationModal extends Modal {
     private noteExistingLanguages: Set<string>;
 
     private previewTextArea: TextAreaComponent | null = null;
+    private previewRenderEl: HTMLElement | null = null;
+    private sourceRenderEl: HTMLElement | null = null;
     private translateButton: ButtonComponent | null = null;
     private insertButton: ButtonComponent | null = null;
+    private modeToggleBtn: ButtonComponent | null = null;
+
+    private isEditMode: boolean = false;
 
     // The generated result we intend to insert
     private translatedContent: string = "";
@@ -77,7 +82,9 @@ export class TranslationModal extends Modal {
             ? sourceLangsToDisplay
             : this.plugin.settings.languages;
 
-        new Setting(contentEl)
+        const settingsRow = contentEl.createDiv("ml-translation-settings-row");
+
+        new Setting(settingsRow)
             .setName(t("settings.source_language") || "Source Language")
             .setDesc(t("settings.source_language_desc") || "Select the existing language block to translate.")
             .addDropdown(drop => {
@@ -85,7 +92,6 @@ export class TranslationModal extends Modal {
                 drop.setValue(this.sourceLanguage);
                 drop.onChange(val => {
                     this.sourceLanguage = val;
-                    // Trigger a re-fetch of source content if we let them change source context in the future
                     this.updateTranslateButtonState();
                 });
             });
@@ -96,7 +102,7 @@ export class TranslationModal extends Modal {
             !this.noteExistingLanguages.has(l.code.toLowerCase())
         );
 
-        new Setting(contentEl)
+        new Setting(settingsRow)
             .setName(t("settings.target_language") || "Target Language")
             .setDesc(t("settings.target_language_desc") || "Select the language to generate a new block for.")
             .addDropdown(drop => {
@@ -124,20 +130,42 @@ export class TranslationModal extends Modal {
 
         this.updateTranslateButtonState();
 
-        contentEl.createEl("h4", { text: t("label.preview_edit") || "Preview & Edit Text" });
-        const previewContainer = contentEl.createDiv("ml-translation-preview");
+        const splitContainer = contentEl.createDiv("ml-translation-split");
 
-        this.previewTextArea = new TextAreaComponent(previewContainer)
-            .setPlaceholder(t("placeholder.translation_preview") || "Click Translate to generate text. You can edit the result here before inserting.")
+        // Left Column: Source
+        const sourceCol = splitContainer.createDiv("ml-translation-col");
+        const sourceHeader = sourceCol.createDiv("ml-translation-col-header");
+        sourceHeader.createEl("h4", { text: t("label.source_text") || "Source Text" });
+
+        this.sourceRenderEl = sourceCol.createDiv("ml-markdown-preview");
+        MarkdownRenderer.render(this.app, this.sourceContent || "_No source text_", this.sourceRenderEl, "", this.plugin);
+
+        // Right Column: Target
+        const targetCol = splitContainer.createDiv("ml-translation-col");
+        const targetHeader = targetCol.createDiv("ml-translation-col-header");
+        targetHeader.createEl("h4", { text: t("label.translation") || "Translation" });
+
+        this.modeToggleBtn = new ButtonComponent(targetHeader)
+            .setIcon("pencil")
+            .setTooltip(t("tooltip.edit_translation") || "Edit Translation")
+            .onClick(() => {
+                this.isEditMode = !this.isEditMode;
+                this.updateViewMode();
+            });
+
+        const targetContainer = targetCol.createDiv("ml-translation-target-container");
+
+        this.previewRenderEl = targetContainer.createDiv("ml-markdown-preview");
+        this.previewTextArea = new TextAreaComponent(targetContainer)
+            .setPlaceholder(t("placeholder.translation_preview") || "Click Translate to generate text.")
             .setValue(this.translatedContent)
             .onChange(val => {
                 this.translatedContent = val;
+                this.renderPreview();
                 this.updateInsertButtonState();
             });
 
-        this.previewTextArea.inputEl.style.width = "100%";
-        // Make the text area taller for better context
-        this.previewTextArea.inputEl.rows = 14;
+        this.updateViewMode();
 
         const actionRow = contentEl.createDiv("ml-action-row");
 
@@ -161,6 +189,28 @@ export class TranslationModal extends Modal {
                 }
                 this.doInsert();
             });
+    }
+
+    private updateViewMode() {
+        if (!this.previewRenderEl || !this.previewTextArea || !this.modeToggleBtn) return;
+
+        if (this.isEditMode) {
+            this.previewRenderEl.style.display = "none";
+            this.previewTextArea.inputEl.style.display = "block";
+            this.modeToggleBtn.setIcon("eye");
+            this.modeToggleBtn.setTooltip("View Markdown");
+        } else {
+            this.previewRenderEl.style.display = "block";
+            this.previewTextArea.inputEl.style.display = "none";
+            this.modeToggleBtn.setIcon("pencil");
+            this.modeToggleBtn.setTooltip("Edit Translation");
+        }
+    }
+
+    private renderPreview() {
+        if (!this.previewRenderEl) return;
+        this.previewRenderEl.empty();
+        MarkdownRenderer.render(this.app, this.translatedContent || "_Generated text will appear here_", this.previewRenderEl, "", this.plugin);
     }
 
     private updateTranslateButtonState() {
@@ -201,7 +251,11 @@ export class TranslationModal extends Modal {
                     // Update the string and the UI synchronously as chunks arrive
                     if (!this.isStreaming) return; // In case user hit cancel
                     this.translatedContent += chunk;
-                    this.previewTextArea!.setValue(this.translatedContent);
+
+                    // Simple debounce for rendering to avoid lagging the UI
+                    window.requestAnimationFrame(() => {
+                        this.renderPreview();
+                    });
                 }
             );
 
@@ -211,6 +265,8 @@ export class TranslationModal extends Modal {
             this.isStreaming = false;
             this.translateButton.setButtonText(t("button.regenerate") || "Regenerate");
             this.updateTranslateButtonState();
+            this.previewTextArea!.setValue(this.translatedContent);
+            this.renderPreview();
             this.updateInsertButtonState();
         }
     }

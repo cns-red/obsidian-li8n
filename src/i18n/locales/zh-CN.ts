@@ -20,6 +20,8 @@ const zhCN: MessagesShape = {
     compare_languages_desc: "选择多个语言以打开并排同步滚动的比对视图。",
     apply_comparison: "应用分屏比对",
     return_normal: "回到单一模式",
+    copy: "复制",
+    export: "导出",
   },
   command: {
     switch_language: "切换语言：{label}",
@@ -40,6 +42,7 @@ const zhCN: MessagesShape = {
     keep_one_language: "至少保留一种语言。",
     api_key_missing: "未配置 API 密钥，请先前往设置中配置。",
     empty_insertion: "无法插入空白文本。",
+    copied: "已复制！",
   },
   settings: {
     title: "i8n — 设置",
@@ -114,6 +117,11 @@ const zhCN: MessagesShape = {
   },
   label: {
     preview_edit: "预览与编辑",
+    source_text: "来源原文",
+    translation: "翻译结果",
+  },
+  tooltip: {
+    edit_translation: "切换编辑翻译 / 查看预览",
   },
   placeholder: {
     translation_preview: "点击翻译按钮生成文本。您可以在插入前在此处检查和编辑结果。",
