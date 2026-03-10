@@ -37,6 +37,7 @@ export default class MultilingualNotesPlugin extends Plugin {
   settings!: MultilingualNotesSettings;
   private statusBarEl!: HTMLElement;
   private ribbonEl!: HTMLElement;
+  private languageRefreshToken = 0;
 
   async onload(): Promise<void> {
     await this.loadSettings();
@@ -106,7 +107,27 @@ export default class MultilingualNotesPlugin extends Plugin {
     clearBlockCache();
     this.refreshStatusBar();
     this.refreshAllViews();
+    this.scheduleStabilizedRefresh();
     this.filterOutlineView();
+  }
+
+  private scheduleStabilizedRefresh(): void {
+    const token = ++this.languageRefreshToken;
+    window.setTimeout(() => {
+      if (token !== this.languageRefreshToken) return;
+      this.refreshAllViews();
+    }, 80);
+  }
+
+  private resetPreviewDisplayState(view: MarkdownView): void {
+    const previewRoot = view.containerEl.querySelector(".markdown-preview-view");
+    if (!previewRoot) return;
+
+    previewRoot.querySelectorAll<HTMLElement>("[style]").forEach((node) => {
+      if (node.style.display) {
+        node.style.display = "";
+      }
+    });
   }
 
   refreshAllViews(): void {
@@ -114,6 +135,7 @@ export default class MultilingualNotesPlugin extends Plugin {
       const view = leaf.view;
       if (!(view instanceof MarkdownView)) return;
       if (view.getMode() === "preview") {
+        this.resetPreviewDisplayState(view);
         (view as any).previewMode?.rerender(true);
         return;
       }
@@ -441,6 +463,7 @@ export default class MultilingualNotesPlugin extends Plugin {
     setTimeout(() => {
       if (resolved.view.getMode() === "preview") {
         clearBlockCache();
+        this.resetPreviewDisplayState(resolved.view);
         (resolved.view as any).previewMode?.rerender(true);
         return;
       }
