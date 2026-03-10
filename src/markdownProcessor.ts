@@ -138,7 +138,7 @@ export function registerReadingModeProcessor(plugin: MultilingualNotesPlugin): v
       if (!info) return; // Can't determine position → leave untouched.
 
       const { text: source, lineStart, lineEnd } = info;
-      const active = plugin.settings.activeLanguage;
+      const active = plugin.getEffectiveLanguageForPath(ctx.sourcePath);
       const defaultLang = plugin.settings.defaultLanguage;
       const showLangHeader = plugin.settings.showLangHeader;
 
@@ -156,7 +156,7 @@ export function registerReadingModeProcessor(plugin: MultilingualNotesPlugin): v
 
       // ── Language header: inject once at top of sizer for multilingual notes ──
       if (blocks.length > 0 && showLangHeader) {
-        ensureLangHeader(el, blocks, plugin);
+        ensureLangHeader(el, blocks, plugin, active);
       }
 
       // ── Feature 3: no markers → whole note is the default language ─────────
@@ -272,6 +272,7 @@ function ensureLangHeader(
   el: HTMLElement,
   blocks: LangBlock[],
   plugin: MultilingualNotesPlugin,
+  active: string,
 ): void {
   const owner = el.closest(".markdown-preview-sizer") ?? el.parentElement;
   if (!owner) return;
@@ -288,7 +289,6 @@ function ensureLangHeader(
     return;
   }
 
-  const active = plugin.settings.activeLanguage;
 
   if (existing) {
     // Check if languages match. If so, just update active states.
@@ -333,7 +333,7 @@ function ensureLangHeader(
   // ALL pill — always present when there are multiple language codes.
   if (langCodes.size > 1) {
     header.appendChild(
-      createHeaderPill("ALL", "ALL", active === "ALL", (code) => plugin.setActiveLanguage(code)),
+      createHeaderPill("ALL", "ALL", active === "ALL", (code) => plugin.setLanguageForActiveFile(code)),
     );
   }
 
@@ -345,7 +345,7 @@ function ensureLangHeader(
     const label = lang ? lang.label : code;
     const isActive = active !== "ALL" && active.toLowerCase() === code.toLowerCase();
     header.appendChild(
-      createHeaderPill(code, label, isActive, (c) => plugin.setActiveLanguage(c)),
+      createHeaderPill(code, label, isActive, (c) => plugin.setLanguageForActiveFile(c)),
     );
   }
 

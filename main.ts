@@ -38,6 +38,7 @@ export default class MultilingualNotesPlugin extends Plugin {
   private statusBarEl!: HTMLElement;
   private ribbonEl!: HTMLElement;
   private languageRefreshToken = 0;
+  private fileLanguageOverrides = new Map<string, string>();
 
   async onload(): Promise<void> {
     await this.loadSettings();
@@ -46,7 +47,7 @@ export default class MultilingualNotesPlugin extends Plugin {
     registerReadingModeProcessor(this);
     this.registerEditorExtension(
       buildEditorExtension({
-        getActiveLanguage: () => this.settings.activeLanguage,
+        getActiveLanguage: () => this.getEffectiveLanguageForActiveFile(),
         getHideMode: () => this.settings.hideInEditor,
       })
     );
@@ -102,8 +103,35 @@ export default class MultilingualNotesPlugin extends Plugin {
   }
 
   async setActiveLanguage(code: string): Promise<void> {
-    this.settings.activeLanguage = code;
+    this.settings.activeLanguage = this.resolveLanguageCode(code);
     await this.saveSettings();
+    clearBlockCache();
+    this.refreshStatusBar();
+    this.refreshAllViews();
+    this.scheduleStabilizedRefresh();
+    this.filterOutlineView();
+  }
+
+  getEffectiveLanguageForPath(path?: string): string {
+    if (!path) return this.settings.activeLanguage;
+    return this.fileLanguageOverrides.get(path) ?? this.settings.activeLanguage;
+  }
+
+  getEffectiveLanguageForActiveFile(): string {
+    return this.getEffectiveLanguageForPath(this.app.workspace.getActiveFile()?.path);
+  }
+
+  private resolveLanguageCode(code: string): string {
+    if (code === "ALL") return "ALL";
+    const matched = this.settings.languages.find((lang) => lang.code.toLowerCase() === code.toLowerCase());
+    return matched?.code ?? code;
+  }
+
+  async setLanguageForActiveFile(code: string): Promise<void> {
+    const activeFile = this.app.workspace.getActiveFile();
+    if (!activeFile) return;
+
+    this.fileLanguageOverrides.set(activeFile.path, this.resolveLanguageCode(code));
     clearBlockCache();
     this.refreshStatusBar();
     this.refreshAllViews();
@@ -141,7 +169,7 @@ export default class MultilingualNotesPlugin extends Plugin {
       }
       const cm = (view.editor as any)?.cm as any;
       if (cm && typeof cm.dispatch === "function") {
-        cm.dispatch({ effects: [setActiveLangEffect.of(this.settings.activeLanguage)] });
+        cm.dispatch({ effects: [setActiveLangEffect.of(this.getEffectiveLanguageForPath(view.file?.path))] });
       }
     });
   }
@@ -159,15 +187,17 @@ export default class MultilingualNotesPlugin extends Plugin {
     };
 
     const activeFile = this.app.workspace.getActiveFile();
-    const active = this.settings.activeLanguage;
+    const active = this.getEffectiveLanguageForActiveFile();
 
     if (!activeFile) {
       ensureOutlineControl(outlineLeaves, this.settings, async (code) => {
-        await this.setActiveLanguage(code);
-      }, new Set()); // Hide pills if no active file
+        await this.setLanguageForActiveFile(code);
+      }, active, new Set()); // Hide pills if no active file
       resetAll();
       return;
     }
+
+    const normalizedPresentCodes = new Set<string>();
 
     const headings = this.app.metadataCache.getFileCache(activeFile)?.headings;
 
@@ -183,14 +213,13 @@ export default class MultilingualNotesPlugin extends Plugin {
     const processWithText = (text: string) => {
       // Find present languages
       const blocks = parseLangBlocks(text);
-      const presentCodes = new Set<string>();
       for (const block of blocks) {
-        block.langCode.split(/\s+/).filter(Boolean).forEach((c) => presentCodes.add(c.toLowerCase()));
+        block.langCode.split(/\s+/).filter(Boolean).forEach((c) => normalizedPresentCodes.add(c.toLowerCase()));
       }
 
       ensureOutlineControl(outlineLeaves, this.settings, async (code) => {
-        await this.setActiveLanguage(code);
-      }, presentCodes);
+        await this.setLanguageForActiveFile(code);
+      }, active, normalizedPresentCodes);
 
       if (active === "ALL" || !headings || headings.length === 0) {
         resetAll();
@@ -214,7 +243,7 @@ export default class MultilingualNotesPlugin extends Plugin {
   refreshStatusBar(): void {
     this.statusBarEl.style.display = this.settings.showStatusBar ? "" : "none";
     if (this.settings.showStatusBar) {
-      buildStatusBar(this.statusBarEl, this.settings, (evt: MouseEvent) => this.showLanguageMenu(evt));
+      buildStatusBar(this.statusBarEl, this.settings, (evt: MouseEvent) => this.showLanguageMenu(evt), this.getEffectiveLanguageForActiveFile());
     }
   }
 
@@ -454,9 +483,9 @@ export default class MultilingualNotesPlugin extends Plugin {
       (view) => this.app.metadataCache.getFileCache(view.file!)?.frontmatter?.lang,
       this.settings.languages.map((l) => l.code)
     );
-    if (!resolved) return;
+    if (!resolved || !resolved.view.file) return;
 
-    this.settings.activeLanguage = resolved.lang;
+    this.fileLanguageOverrides.set(resolved.view.file.path, this.resolveLanguageCode(resolved.lang));
     this.refreshStatusBar();
     // Guard by mode so preview refresh never touches editor APIs.
     // Side effect: only the current leaf is refreshed during override application.

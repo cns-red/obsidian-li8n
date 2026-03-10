@@ -4,16 +4,17 @@ import { Menu, setIcon } from "obsidian";
 import { t } from "../i18n";
 import type { MultilingualNotesSettings } from "../settings";
 
-export function getActiveLabel(settings: MultilingualNotesSettings): string {
-  if (settings.activeLanguage === "ALL") return t("status_bar.all_languages");
-  const lang = settings.languages.find((l) => l.code === settings.activeLanguage);
-  return lang ? lang.label : settings.activeLanguage;
+export function getActiveLabel(settings: MultilingualNotesSettings, activeLanguage: string): string {
+  if (activeLanguage === "ALL") return t("status_bar.all_languages");
+  const lang = settings.languages.find((l) => l.code.toLowerCase() === activeLanguage.toLowerCase());
+  return lang ? lang.label : activeLanguage;
 }
 
 export function buildStatusBar(
   statusBarEl: HTMLElement,
   settings: MultilingualNotesSettings,
-  onShowLanguageMenu: (evt: MouseEvent) => void
+  onShowLanguageMenu: (evt: MouseEvent) => void,
+  activeLanguage: string
 ): void {
   statusBarEl.empty();
 
@@ -22,7 +23,7 @@ export function buildStatusBar(
   setIcon(icon, "languages");
 
   const label = wrapper.createSpan("ml-status-label");
-  label.textContent = getActiveLabel(settings);
+  label.textContent = getActiveLabel(settings, activeLanguage);
   label.setAttribute("title", t("status_bar.click_to_switch"));
   label.style.cursor = "pointer";
 
@@ -49,7 +50,7 @@ export function showLanguageMenu(
     menu.addItem((item) => {
       item
         .setTitle(lang.label)
-        .setChecked(settings.activeLanguage === lang.code)
+        .setChecked(settings.activeLanguage.toLowerCase() === lang.code.toLowerCase())
         .onClick(async () => onSetActiveLanguage(lang.code));
     });
   }

@@ -10,8 +10,11 @@ export function resolveFrontmatterLanguage(
   const view = leaf.view;
   if (!(view instanceof MarkdownView) || !view.file) return null;
 
-  const lang = getFrontmatterLang(view);
-  if (!lang) return null;
-  if (lang !== "ALL" && !knownLanguages.includes(lang)) return null;
-  return { view, lang };
+  const rawLang = getFrontmatterLang(view);
+  if (!rawLang) return null;
+  if (rawLang === "ALL") return { view, lang: "ALL" };
+
+  const matched = knownLanguages.find((code) => code.toLowerCase() === rawLang.toLowerCase());
+  if (!matched) return null;
+  return { view, lang: matched };
 }

@@ -42,6 +42,7 @@ export function ensureOutlineControl(
   outlineLeaves: WorkspaceLeaf[],
   settings: MultilingualNotesSettings,
   onSwitch: (code: string) => void,
+  activeLanguage: string,
   presentCodes?: Set<string>,
 ): void {
   for (const leaf of outlineLeaves) {
@@ -58,7 +59,7 @@ export function ensureOutlineControl(
     const bar = document.createElement("div");
     bar.className = "ml-outline-lang-bar";
 
-    const active = settings.activeLanguage;
+    const active = activeLanguage;
 
     // ALL pill
     if (!presentCodes || presentCodes.size > 1) {
@@ -72,7 +73,7 @@ export function ensureOutlineControl(
 
     for (const lang of codesToRender) {
       bar.appendChild(
-        createOutlinePill(lang.code, lang.label, active === lang.code, onSwitch),
+        createOutlinePill(lang.code, lang.label, active.toLowerCase() === lang.code.toLowerCase(), onSwitch),
       );
     }
 
