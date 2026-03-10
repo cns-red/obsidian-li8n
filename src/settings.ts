@@ -67,8 +67,8 @@ export const SYNTAX_EXAMPLES = [
   },
   {
     titleKey: "settings.syntax.hexo_title",
-    open: "{% i8n zh-CN %}",
-    close: "{% endi8n %}",
+    open: "{% li8n zh-CN %}",
+    close: "{% endli8n %}",
     noteKey: "settings.syntax.hexo_note",
   },
   {
@@ -104,7 +104,7 @@ export class MultilingualNotesSettingTab extends PluginSettingTab {
     const masthead = containerEl.createDiv("ml-settings-masthead");
     masthead.createEl("div", { cls: "ml-settings-masthead-icon", text: "🌍" });
     const mastheadText = masthead.createDiv("ml-settings-masthead-text");
-    mastheadText.createEl("h2", { text: "Multilingual Notes · i8n" });
+    mastheadText.createEl("h2", { text: "Multilingual Notes · li8n" });
     mastheadText.createEl("p", { text: t("settings.plugin_tagline") });
 
     // ══ Section 1: Language Library ════════════════════════════════════════

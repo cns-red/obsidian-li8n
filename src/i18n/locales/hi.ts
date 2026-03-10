@@ -34,7 +34,7 @@ const hi = {
         keep_one_language: "कम से कम एक भाषा रखना अनिवार्य है।",
     },
     settings: {
-        title: "i8n — सेटिंग्स",
+        title: "li8n — सेटिंग्स",
         active_language_name: "सक्रिय भाषा",
         active_language_desc: "वह भाषा जो वर्तमान में सभी नोट्स में दिखाई जाती है।",
         default_language_name: "डिफ़ॉल्ट भाषा",

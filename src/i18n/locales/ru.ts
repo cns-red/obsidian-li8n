@@ -34,7 +34,7 @@ const ru = {
         keep_one_language: "Необходимо оставить хотя бы один язык.",
     },
     settings: {
-        title: "i8n — Настройки",
+        title: "li8n — Настройки",
         active_language_name: "Активный язык",
         active_language_desc: "Язык, который отображается сейчас.",
         default_language_name: "Язык по умолчанию",

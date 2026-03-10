@@ -34,7 +34,7 @@ const fr = {
         keep_one_language: "Vous devez conserver au moins une langue.",
     },
     settings: {
-        title: "i8n — Paramètres",
+        title: "li8n — Paramètres",
         active_language_name: "Langue active",
         active_language_desc: "Langue actuellement affichée sur toutes les notes.",
         default_language_name: "Langue par défaut",

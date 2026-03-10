@@ -45,7 +45,7 @@ const zhCN: MessagesShape = {
     copied: "已复制！",
   },
   settings: {
-    title: "i8n — 设置",
+    title: "li8n — 设置",
     plugin_tagline: "单源多语言 Obsidian 笔记插件。",
     section_languages: "语言库",
     section_languages_desc: "配置语言集合、当前激活语言及未标记笔记的回退规则。",

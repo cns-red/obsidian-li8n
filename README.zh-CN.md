@@ -1,4 +1,4 @@
-# i8n — Obsidian 插件
+# li8n — Obsidian 插件
 
 **语言:** [English](README.md) | [简体中文](README.zh-CN.md)
 
@@ -17,39 +17,39 @@
 
 ### 安装
 
-1. 可通过 BRAT 安装，或手动将 `main.js`、`manifest.json`、`styles.css` 复制到 `<vault>/.obsidian/plugins/i8n/`。
-2. 在 **Settings → Community plugins** 中启用 **i8n**。
+1. 可通过 BRAT 安装，或手动将 `main.js`、`manifest.json`、`styles.css` 复制到 `<vault>/.obsidian/plugins/li8n/`。
+2. 在 **Settings → Community plugins** 中启用 **li8n**。
 
 ### 语法
 
 以下语法可混用，效果等价：
 
 ```md
-:::lang zh-CN
+:::li8n zh-CN
 这是中文版本。
 :::
 
-:::lang en
+:::li8n en
 This is the English version.
 :::
 ```
 
 ```md
-{% i8n zh-CN %}
+{% li8n zh-CN %}
 这是中文版本。
-{% endi8n %}
+{% endli8n %}
 ```
 
 ```md
-[//]: # (lang zh-CN)
+[//]: # (li8n zh-CN)
 这是中文版本。
-[//]: # ()
+[//]: # (endli8n)
 ```
 
 ```md
-%% lang zh-CN %%
+%% li8n zh-CN %%
 这是中文版本。
-%% end %%
+%% endli8n %%
 ```
 
 规则：
@@ -76,7 +76,7 @@ This is the English version.
 
 ## Settings
 
-打开 **Settings → i8n**：
+打开 **Settings → li8n**：
 
 - **Active language**：当前全局显示语言。
 - **Default language**：无标记笔记的默认语言。
@@ -87,8 +87,8 @@ This is the English version.
 ## Build
 
 ```bash
-git clone https://github.com/your-username/obsidian-i8n
-cd obsidian-i8n
+git clone https://github.com/your-username/obsidian-li8n
+cd obsidian-li8n
 npm install
 npm run dev
 npm run build

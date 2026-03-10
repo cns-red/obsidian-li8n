@@ -6,7 +6,7 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 
 const execFileAsync = promisify(execFile);
-const tempDir = await mkdtemp(join(tmpdir(), "i8n-tests-"));
+const tempDir = await mkdtemp(join(tmpdir(), "li8n-tests-"));
 const outFile = join(tempDir, "syntax-tests.cjs");
 
 try {

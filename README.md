@@ -1,4 +1,4 @@
-# i8n — Obsidian Plugin
+# li8n — Obsidian Plugin
 
 **Languages:** [English](README.md) | [简体中文](README.zh-CN.md)
 
@@ -17,39 +17,39 @@ Write multiple language versions of the same content in a single Markdown file, 
 
 ### Installation
 
-1. Install with BRAT, or manually copy `main.js`, `manifest.json`, and `styles.css` to `<vault>/.obsidian/plugins/i8n/`.
-2. Enable **i8n** in **Settings → Community plugins**.
+1. Install with BRAT, or manually copy `main.js`, `manifest.json`, and `styles.css` to `<vault>/.obsidian/plugins/li8n/`.
+2. Enable **li8n** in **Settings → Community plugins**.
 
 ### Syntax
 
 Use any of the following block styles (mixed usage is supported):
 
 ```md
-:::lang zh-CN
+:::li8n zh-CN
 这是中文版本。
 :::
 
-:::lang en
+:::li8n en
 This is the English version.
 :::
 ```
 
 ```md
-{% i8n zh-CN %}
+{% li8n zh-CN %}
 这是中文版本。
-{% endi8n %}
+{% endli8n %}
 ```
 
 ```md
-[//]: # (lang zh-CN)
+[//]: # (li8n zh-CN)
 这是中文版本。
-[//]: # ()
+[//]: # (endli8n)
 ```
 
 ```md
-%% lang zh-CN %%
+%% li8n zh-CN %%
 这是中文版本。
-%% end %%
+%% endli8n %%
 ```
 
 Rules:
@@ -76,7 +76,7 @@ When adding or updating localized READMEs:
 
 ## Settings
 
-Open **Settings → i8n**:
+Open **Settings → li8n**:
 
 - **Active language**: currently visible language across notes.
 - **Default language**: assumed language for notes without markers.
@@ -87,8 +87,8 @@ Open **Settings → i8n**:
 ## Build
 
 ```bash
-git clone https://github.com/your-username/obsidian-i8n
-cd obsidian-i8n
+git clone https://github.com/your-username/obsidian-li8n
+cd obsidian-li8n
 npm install
 npm run dev
 npm run build

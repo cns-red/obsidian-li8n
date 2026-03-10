@@ -1,6 +1,6 @@
 {
-  "id": "i8n",
-  "name": "i8n",
+  "id": "li8n",
+  "name": "li8n",
   "version": "1.0.0",
   "minAppVersion": "1.0.0",
   "description": "单稿多语言 Write multiple language versions of the same content in a single Markdown file, then switch the visible language globally.",

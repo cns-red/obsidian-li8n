@@ -34,7 +34,7 @@ const ko = {
         keep_one_language: "최소 하나의 언어를 유지해야 합니다.",
     },
     settings: {
-        title: "i8n — 설정",
+        title: "li8n — 설정",
         active_language_name: "현재 활성 언어",
         active_language_desc: "모든 노트에 기본으로 표시되는 언어입니다.",
         default_language_name: "기본 언어",

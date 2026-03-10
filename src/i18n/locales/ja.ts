@@ -38,7 +38,7 @@ const ja = {
         keep_one_language: "言語は最低でも一つ必要です。",
     },
     settings: {
-        title: "i8n — 設定",
+        title: "li8n — 設定",
         active_language_name: "現在のアクティブな言語",
         active_language_desc: "すべてのノートでデフォルト表示される言語。",
         default_language_name: "デフォルト言語",

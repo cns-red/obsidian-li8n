@@ -518,10 +518,10 @@ export default class MultilingualNotesPlugin extends Plugin {
   private insertMultilingualTemplate(editor: Editor): void {
     const lines: string[] = [];
     for (const lang of this.settings.languages) {
-      lines.push(`[//]: # (lang ${lang.code})`);
+      lines.push(`[//]: # (li8n ${lang.code})`);
       lines.push(`<!-- ${lang.label} content here -->`);
       lines.push("");
-      lines.push("[//]: # (endlang)");
+      lines.push("[//]: # (endli8n)");
       lines.push("");
     }
     editor.replaceRange(lines.join("\n"), editor.getCursor());
@@ -729,11 +729,11 @@ export default class MultilingualNotesPlugin extends Plugin {
       // Attempt to guess the boundary syntax based on the source block if possible
       const sourceOpenTag = text.slice(activeBlock!.start, activeBlock!.innerStart).trim();
       if (sourceOpenTag.startsWith("[//]:")) {
-        insertionContent = `\n\n[//]: # (lang ${targetLangCode})\n${translatedText}\n[//]: # (endlang)`;
+        insertionContent = `\n\n[//]: # (li8n ${targetLangCode})\n${translatedText}\n[//]: # (endli8n)`;
       } else if (sourceOpenTag.startsWith("{%")) {
-        insertionContent = `\n\n{% i8n ${targetLangCode} %}\n${translatedText}\n{% endi8n %}`;
+        insertionContent = `\n\n{% li8n ${targetLangCode} %}\n${translatedText}\n{% endli8n %}`;
       } else if (sourceOpenTag.startsWith("%%")) {
-        insertionContent = `\n\n%% lang ${targetLangCode} %%\n${translatedText}\n%% end %%`;
+        insertionContent = `\n\n%% li8n ${targetLangCode} %%\n${translatedText}\n%% endli8n %%`;
       }
 
       editor.replaceRange(insertionContent, pos);

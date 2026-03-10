@@ -43,7 +43,7 @@ const en = {
     copied: "Copied!",
   },
   settings: {
-    title: "i8n — Settings",
+    title: "li8n — Settings",
     plugin_tagline: "Single-source, multi-language Obsidian documents.",
     section_languages: "Language Library",
     section_languages_desc: "Configure your language set, active language, and fallback behaviour.",

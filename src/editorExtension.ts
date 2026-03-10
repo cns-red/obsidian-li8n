@@ -5,16 +5,16 @@
  * in Obsidian's Live Preview / editing mode.
  *
  * Supported open-block syntax (same as markdownProcessor):
- *   :::lang zh-cn
- *   {% i8n zh-cn %}
- *   [//]: # (lang zh-cn)
- *   %% lang zh-cn %%
+ *   :::li8n zh-cn
+ *   {% li8n zh-cn %}
+ *   [//]: # (li8n zh-cn)
+ *   %% li8n zh-cn %%
  *
- * Supported close-block syntax:
+ * Supported open-block close tags:
  *   :::
- *   {% endi8n %}
- *   [//]: # (endlang)
- *   %% endlang %%
+ *   {% endli8n %}
+ *   [//]: # (endli8n)
+ *   %% endli8n %%
  */
 
 import {
@@ -104,7 +104,7 @@ function computeDecorations(
   state: EditorState,
   config: LangExtensionConfig
 ): DecorationSet {
-  const active   = config.getActiveLanguage();
+  const active = config.getActiveLanguage();
   const hideMode = config.getHideMode();
 
   // hideMode = false means "show everything in editor — no filtering at all".
@@ -114,11 +114,11 @@ function computeDecorations(
   }
 
   const decorations: Range<Decoration>[] = [];
-  const doc       = state.doc;
+  const doc = state.doc;
   const lineCount = doc.lines;
 
-  let insideBlock    = false;
-  let blockLang      = "";
+  let insideBlock = false;
+  let blockLang = "";
   let blockStartLine = 0; // 1-based
 
   for (let ln = 1; ln <= lineCount; ln++) {
@@ -128,8 +128,8 @@ function computeDecorations(
     if (!insideBlock) {
       const langCode = matchLanguageBlockOpen(text);
       if (langCode !== null) {
-        insideBlock    = true;
-        blockLang      = langCode;
+        insideBlock = true;
+        blockLang = langCode;
         blockStartLine = ln;
       }
     } else {
@@ -151,8 +151,8 @@ function computeDecorations(
           );
         }
 
-        insideBlock    = false;
-        blockLang      = "";
+        insideBlock = false;
+        blockLang = "";
         blockStartLine = 0;
       }
     }
@@ -172,7 +172,7 @@ function applyHideDecorations(
   lineCount: number,
 ): void {
   const fromLine = state.doc.line(fromLineno);
-  const toLine   = state.doc.line(toLineno);
+  const toLine = state.doc.line(toLineno);
   out.push(
     Decoration.replace({
       widget: new HiddenBlockWidget(langCode, lineCount),
