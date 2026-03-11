@@ -5,6 +5,7 @@ const ja = {
     status_bar: {
         click_to_switch: "クリックして言語を切り替える",
         all_languages: "すべての言語",
+        missing_translations: "翻訳が不足している言語があります",
     },
     menu: {
         show_all_languages: "すべての言語を表示",

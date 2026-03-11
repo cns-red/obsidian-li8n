@@ -5,6 +5,7 @@ const ko = {
     status_bar: {
         click_to_switch: "클릭하여 언어 전환",
         all_languages: "모든 언어",
+        missing_translations: "일부 언어의 번역이 누락되었습니다",
     },
     menu: {
         show_all_languages: "모든 언어 표시",

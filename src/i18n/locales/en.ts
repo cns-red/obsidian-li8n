@@ -5,6 +5,7 @@ const en = {
   status_bar: {
     click_to_switch: "Click to switch language",
     all_languages: "All languages",
+    missing_translations: "Some languages are missing translations",
   },
   menu: {
     show_all_languages: "Show all languages",

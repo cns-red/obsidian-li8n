@@ -5,6 +5,7 @@ const hi = {
     status_bar: {
         click_to_switch: "भाषा बदलने के लिए क्लिक करें",
         all_languages: "सभी भाषाएँ",
+        missing_translations: "कुछ भाषाओं में अनुवाद नहीं है",
     },
     menu: {
         show_all_languages: "सभी भाषाएँ दिखाएँ",

@@ -5,6 +5,7 @@ const ru = {
     status_bar: {
         click_to_switch: "Нажмите, чтобы переключить язык",
         all_languages: "Все языки",
+        missing_translations: "Перевод отсутствует для некоторых языков",
     },
     menu: {
         show_all_languages: "Показать все языки",

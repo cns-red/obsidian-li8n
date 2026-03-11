@@ -5,6 +5,7 @@ const zhTW = {
     status_bar: {
         click_to_switch: "點擊切換語言",
         all_languages: "所有語言",
+        missing_translations: "部分語言缺少翻譯",
     },
     menu: {
         show_all_languages: "顯示所有語言",

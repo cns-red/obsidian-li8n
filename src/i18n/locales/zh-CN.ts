@@ -7,6 +7,7 @@ const zhCN: MessagesShape = {
   status_bar: {
     click_to_switch: "点击切换语言",
     all_languages: "所有语言",
+    missing_translations: "部分语言缺少翻译",
   },
   menu: {
     show_all_languages: "显示所有语言",

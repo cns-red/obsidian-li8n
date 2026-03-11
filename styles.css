@@ -14,13 +14,21 @@
   gap: 4px;
 }
 
+.ml-status-impl {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  padding: 2px;
+  transition: background-color 0.15s ease;
+  color: var(--text-warning);
+}
+
 .ml-status-wrapper {
   display: flex;
   align-items: center;
   gap: 4px;
   cursor: pointer;
-  padding: 0 4px;
-  border-radius: 4px;
+  padding: 2px;
   transition: background-color 0.15s ease;
 }
 
@@ -32,8 +40,7 @@
   display: flex;
   align-items: center;
   cursor: pointer;
-  padding: 0 4px;
-  border-radius: 4px;
+  padding: 2px;
   transition: background-color 0.15s ease;
   color: var(--text-muted);
 }

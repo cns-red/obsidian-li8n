@@ -122,8 +122,9 @@ export default class MultilingualNotesPlugin extends Plugin {
 
     this.registerEvent(
       this.app.workspace.on("active-leaf-change", (leaf: WorkspaceLeaf | null) => {
-        if (!leaf) return;
-        this.applyFrontmatterOverride(leaf);
+        if (leaf) {
+          this.applyFrontmatterOverride(leaf);
+        }
         this.refreshStatusBar();
         setTimeout(() => this.filterOutlineView(), 0);
       })
@@ -247,6 +248,35 @@ export default class MultilingualNotesPlugin extends Plugin {
   getEffectiveLanguageForActiveLeaf(): string {
     const leaf = this.app.workspace.getMostRecentLeaf();
     return this.getEffectiveLanguageForLeaf(leaf);
+  }
+
+  computeHasMissingLanguages(): boolean {
+    const configuredCount = this.settings.languages.length;
+    if (configuredCount === 0) return false;
+
+    const editorText = this.app.workspace
+        .getActiveViewOfType(MarkdownView)?.editor?.getValue();
+
+    if (editorText != null) {
+      const blocks = parseLangBlocks(editorText);
+      // 没有任何语言块 → 不是多语言笔记，不提示
+      if (blocks.length === 0) return false;
+      const implemented = extractAvailableLanguagesFromBlocks(blocks, this.settings.languages);
+      return implemented.size < configuredCount;
+    }
+
+    const activeFile = this.app.workspace.getActiveFile();
+    if (activeFile) {
+      const fm = this.app.metadataCache.getFileCache(activeFile)?.frontmatter;
+      const li8n: string[] = fm?.li8n
+          ? (Array.isArray(fm.li8n) ? fm.li8n : [String(fm.li8n)])
+          : [];
+      // frontmatter 无 li8n 字段 → 不是多语言笔记，不提示
+      if (li8n.length === 0) return false;
+      return li8n.length < configuredCount;
+    }
+
+    return false;
   }
 
   getLanguageForElement(el: HTMLElement, sourcePath?: string): string {
@@ -456,7 +486,17 @@ export default class MultilingualNotesPlugin extends Plugin {
   }
 
   refreshStatusBar(): void {
-    this.statusBarEl.style.display = this.settings.showStatusBar ? "" : "none";
+    if (!this.settings.showStatusBar) {
+      this.statusBarEl.style.display = "none";
+      return;
+    }
+    const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
+    const activeFile = this.app.workspace.getActiveFile();
+    if (!activeView || !activeFile || activeFile.extension !== "md") {
+      this.statusBarEl.style.display = "none";
+      return;
+    }
+    this.statusBarEl.style.display = "";
     if (this.settings.showStatusBar) {
       buildStatusBar(
         this.statusBarEl,
@@ -507,7 +547,7 @@ export default class MultilingualNotesPlugin extends Plugin {
             }
           });
         },
-        this.getEffectiveLanguageForActiveLeaf()
+        this.getEffectiveLanguageForActiveLeaf(), this.computeHasMissingLanguages()
       );
     }
   }

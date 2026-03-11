@@ -5,6 +5,7 @@ const fr = {
     status_bar: {
         click_to_switch: "Cliquez pour changer de langue",
         all_languages: "Toutes les langues",
+        missing_translations: "Des traductions manquent pour certaines langues",
     },
     menu: {
         show_all_languages: "Afficher toutes les langues",

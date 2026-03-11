@@ -15,7 +15,8 @@ export function buildStatusBar(
   settings: MultilingualNotesSettings,
   onLanguageClick: (evt: MouseEvent) => void,
   onCompareClick: (evt: MouseEvent) => void,
-  activeLanguage: string
+  activeLanguage: string,
+  activeImplTip: boolean
 ): void {
   statusBarEl.empty();
   statusBarEl.addClass("ml-status-bar-container");
@@ -42,6 +43,14 @@ export function buildStatusBar(
   compareBtn.style.display = "flex";
   compareBtn.style.alignItems = "center";
   compareBtn.onclick = onCompareClick;
+
+  const fullImpl = statusBarEl.createDiv("ml-status-impl");
+  setIcon(fullImpl, "keyboard");
+  fullImpl.setAttribute("title", t("status_bar.missing_translations"));
+  fullImpl.style.cursor = "pointer";
+  fullImpl.style.marginLeft = "6px";
+  fullImpl.style.display = activeImplTip ? "flex" : "none";
+  fullImpl.style.alignItems = "center";
 }
 
 export function showLanguageMenu(
