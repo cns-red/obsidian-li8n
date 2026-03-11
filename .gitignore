@@ -5,3 +5,6 @@
 # dev
 node_modules
 main.js
+
+# lock files (using bun)
+package-lock.json
