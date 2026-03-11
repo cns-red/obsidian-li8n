@@ -1,11 +1,11 @@
 {
-	"id": "li8n",
-	"name": "li8n",
-	"version": "1.0.0",
-	"minAppVersion": "1.4.0",
-	"description": "Write multiple language versions of the same content in a single Markdown file, then switch the visible language globally.",
-	"repo": "cns-red/obsidian-li8n",
-	"author": "J.K.",
-	"authorUrl": "https://log.cns.red",
-	"isDesktopOnly": false
+  "id": "li8n",
+  "name": "li8n",
+  "version": "1.1.0",
+  "minAppVersion": "1.4.0",
+  "description": "Write multiple language versions of the same content in a single Markdown file, then switch the visible language globally.",
+  "repo": "cns-red/obsidian-li8n",
+  "author": "J.K.",
+  "authorUrl": "https://log.cns.red",
+  "isDesktopOnly": false
 }

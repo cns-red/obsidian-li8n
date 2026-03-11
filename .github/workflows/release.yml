@@ -11,22 +11,28 @@ jobs:
     permissions:
       contents: write
 
+    env:
+      TAG: ${{ github.ref_name }}
+
     steps:
       - uses: actions/checkout@v4
 
       - uses: oven-sh/setup-bun@v2
 
+      - name: Install deps
+        run: bun install --frozen-lockfile
+
+      - name: Sync version files from tag
+        run: node version-bump.mjs "$TAG"
+
       - name: Build plugin
-        run: |
-          bun install --frozen-lockfile
-          bun run build
+        run: bun run build
 
       - name: Create release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          tag="${GITHUB_REF#refs/tags/}"
-          gh release create "$tag" \
-            --title "$tag" \
+          gh release create "$TAG" \
+            --title "$TAG" \
             --draft \
             main.js manifest.json styles.css
