@@ -80,6 +80,7 @@ const ko = {
         scope_excl_dirs_name: "제외 디렉토리",
         scope_excl_dirs_hint: "이 폴더 내에서는 플러그인이 비활성화됩니다. 작업 디렉토리보다 우선합니다.",
         scope_all_files: "모든 파일 (제한 없음)",
+        scope_excl_empty: "제외된 폴더 없음.",
         scope_add_dir: "+ 디렉토리 추가",
         scope_remove_dir_tooltip: "이 디렉토리 제거",
         scope_dir_placeholder: "폴더/하위폴더",

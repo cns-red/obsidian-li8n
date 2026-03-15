@@ -83,6 +83,7 @@ const fr = {
         scope_excl_dirs_name: "Dossiers exclus",
         scope_excl_dirs_hint: "Le plugin est complètement désactivé dans ces dossiers. Priorité sur les dossiers de travail.",
         scope_all_files: "Tous les fichiers (aucune restriction)",
+        scope_excl_empty: "Aucun dossier exclu.",
         scope_add_dir: "+ Ajouter un dossier",
         scope_remove_dir_tooltip: "Supprimer ce dossier",
         scope_dir_placeholder: "dossier/sous-dossier",

@@ -1,4 +1,33 @@
-import {App, PluginSettingTab, Setting, Notice, setIcon} from "obsidian";
+import {App, PluginSettingTab, Setting, Notice, setIcon, AbstractInputSuggest, TFolder} from "obsidian";
+
+/** Folder path autocomplete — mirrors the pattern used by Obsidian's own template plugin. */
+class FolderSuggest extends AbstractInputSuggest<TFolder> {
+  private _inputEl: HTMLInputElement;
+  private _app: App;
+
+  constructor(app: App, inputEl: HTMLInputElement) {
+    super(app, inputEl);
+    this._inputEl = inputEl;
+    this._app = app;
+  }
+
+  getSuggestions(query: string): TFolder[] {
+    const lower = query.toLowerCase();
+    return this._app.vault.getAllFolders()
+      .filter(f => f.path !== "/" && f.path.toLowerCase().contains(lower))
+      .slice(0, 25);
+  }
+
+  renderSuggestion(folder: TFolder, el: HTMLElement): void {
+    el.setText(folder.path);
+  }
+
+  selectSuggestion(folder: TFolder, _evt: MouseEvent | KeyboardEvent): void {
+    this.setValue(folder.path);
+    this._inputEl.trigger("input");
+    this.close();
+  }
+}
 import type MultilingualNotesPlugin from "../main";
 import { t } from "./i18n";
 
@@ -276,8 +305,11 @@ export class MultilingualNotesSettingTab extends PluginSettingTab {
 
     // ══ Section 5: Scope ══════════════════════════════════════════════════
     this.section(containerEl, "folder-search", t("settings.section_scope"), t("settings.section_scope_desc"), (body) => {
-      this.renderScopeGroup(body, t("settings.scope_work_dirs_name"), t("settings.scope_work_dirs_hint"), "workDirs");
-      this.renderScopeGroup(body, t("settings.scope_excl_dirs_name"), t("settings.scope_excl_dirs_hint"), "excludeDirs");
+      // Each group is wrapped independently so a failure in one never blocks the other.
+      try { this.renderScopeGroup(body, t("settings.scope_work_dirs_name"), t("settings.scope_work_dirs_hint"), "workDirs"); }
+      catch (e) { console.error("[mi18n] scope workDirs render error", e); }
+      try { this.renderScopeGroup(body, t("settings.scope_excl_dirs_name"), t("settings.scope_excl_dirs_hint"), "excludeDirs"); }
+      catch (e) { console.error("[mi18n] scope excludeDirs render error", e); }
     });
 
     // ══ Footer ══════════════════════════════════════════════════════════════
@@ -438,7 +470,7 @@ export class MultilingualNotesSettingTab extends PluginSettingTab {
     header.createEl("span", { text: hint, cls: "ml-scope-group-hint" });
 
     const listEl = group.createDiv("ml-scope-list");
-    this.renderDirList(listEl, field);
+    try { this.renderDirList(listEl, field); } catch (e) { console.error("[mi18n] renderDirList error", e); }
 
     const addRow = group.createDiv("ml-settings-add-row");
     const addBtn = addRow.createEl("button", {
@@ -447,7 +479,7 @@ export class MultilingualNotesSettingTab extends PluginSettingTab {
     });
     addBtn.addEventListener("click", () => {
       this.plugin.settings[field].push("");
-      this.plugin.saveSettings().then(() => this.renderDirList(listEl, field)).catch(console.error);
+      void this.plugin.saveSettings().then(() => this.renderDirList(listEl, field));
     });
   }
 
@@ -456,16 +488,15 @@ export class MultilingualNotesSettingTab extends PluginSettingTab {
     const dirs = this.plugin.settings[field];
 
     if (dirs.length === 0) {
-      if (field === "workDirs") {
-        container.createDiv({
-          text: t("settings.scope_all_files"),
-          cls: "ml-scope-empty-hint",
-        });
-      }
+      container.createDiv({
+        text: field === "workDirs" ? t("settings.scope_all_files") : t("settings.scope_excl_empty"),
+        cls: "ml-scope-empty-hint",
+      });
       return;
     }
 
     dirs.forEach((dir, index) => {
+      let capturedInput: HTMLInputElement | null = null;
       const row = new Setting(container)
         .addText((text) => {
           text
@@ -475,8 +506,10 @@ export class MultilingualNotesSettingTab extends PluginSettingTab {
               this.plugin.settings[field][index] = value.trim().replace(/\/+$/, "");
               await this.plugin.saveSettings();
             });
-          text.inputEl.addClass("ml-settings-input-wide ml-settings-input-mono");
+          text.inputEl.addClass("ml-settings-input-wide");
+          text.inputEl.addClass("ml-settings-input-mono");
           text.inputEl.setAttribute("spellcheck", "false");
+          capturedInput = text.inputEl;
         })
         .addButton((btn) => {
           btn
@@ -490,6 +523,11 @@ export class MultilingualNotesSettingTab extends PluginSettingTab {
             });
         });
       row.setName(t("settings.scope_dir_row", { index: index + 1 }));
+      // Attach autocomplete after the row is fully built so a suggest failure
+      // cannot abort the chain and leave out the delete button or row name.
+      if (capturedInput) {
+        try { new FolderSuggest(this.plugin.app, capturedInput); } catch { /* skip */ }
+      }
     });
   }
 }

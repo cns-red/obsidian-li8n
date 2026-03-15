@@ -89,6 +89,7 @@ const zhTW = {
         scope_excl_dirs_name: "排除目錄",
         scope_excl_dirs_hint: "這些目錄內插件完全不觸發，優先級高於工作目錄。",
         scope_all_files: "全部文件（無限制）",
+        scope_excl_empty: "暫無排除目錄。",
         scope_add_dir: "+ 添加目錄",
         scope_remove_dir_tooltip: "移除此目錄",
         scope_dir_placeholder: "資料夾/子資料夾",

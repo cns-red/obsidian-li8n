@@ -107,6 +107,7 @@ const en = {
     scope_excl_dirs_name: "Excluded directories",
     scope_excl_dirs_hint: "Plugin is fully disabled inside these folders. Takes priority over working directories.",
     scope_all_files: "All files (no restriction)",
+    scope_excl_empty: "No folders excluded.",
     scope_add_dir: "+ Add directory",
     scope_remove_dir_tooltip: "Remove this directory",
     scope_dir_placeholder: "folder/subfolder",

@@ -83,6 +83,7 @@ const hi = {
         scope_excl_dirs_name: "बाहर की गई डायरेक्टरी",
         scope_excl_dirs_hint: "इन फ़ोल्डर में प्लगइन पूरी तरह अक्षम है। कार्यशील डायरेक्टरी से अधिक प्राथमिकता।",
         scope_all_files: "सभी फ़ाइलें (कोई प्रतिबंध नहीं)",
+        scope_excl_empty: "कोई बाहर की गई फ़ोल्डर नहीं।",
         scope_add_dir: "+ डायरेक्टरी जोड़ें",
         scope_remove_dir_tooltip: "यह डायरेक्टरी हटाएँ",
         scope_dir_placeholder: "फ़ोल्डर/उप-फ़ोल्डर",

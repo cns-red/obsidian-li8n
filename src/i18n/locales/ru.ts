@@ -83,6 +83,7 @@ const ru = {
         scope_excl_dirs_name: "Исключённые папки",
         scope_excl_dirs_hint: "Плагин полностью отключён в этих папках. Приоритет выше рабочих папок.",
         scope_all_files: "Все файлы (без ограничений)",
+        scope_excl_empty: "Исключённых папок нет.",
         scope_add_dir: "+ Добавить папку",
         scope_remove_dir_tooltip: "Удалить эту папку",
         scope_dir_placeholder: "папка/подпапка",

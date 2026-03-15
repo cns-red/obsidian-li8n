@@ -107,6 +107,7 @@ const zhCN: MessagesShape = {
     scope_excl_dirs_name: "排除目录",
     scope_excl_dirs_hint: "这些目录内插件完全不触发，优先级高于工作目录。",
     scope_all_files: "全部文件（无限制）",
+    scope_excl_empty: "暂无排除目录。",
     scope_add_dir: "+ 添加目录",
     scope_remove_dir_tooltip: "移除此目录",
     scope_dir_placeholder: "文件夹/子文件夹",

@@ -87,6 +87,7 @@ const ja = {
         scope_excl_dirs_name: "除外ディレクトリ",
         scope_excl_dirs_hint: "これらのフォルダ内ではプラグインが無効。作業ディレクトリより優先。",
         scope_all_files: "全ファイル（制限なし）",
+        scope_excl_empty: "除外フォルダなし。",
         scope_add_dir: "+ ディレクトリを追加",
         scope_remove_dir_tooltip: "このディレクトリを削除",
         scope_dir_placeholder: "フォルダ/サブフォルダ",
