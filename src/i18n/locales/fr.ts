@@ -44,6 +44,9 @@ const fr = {
         hide_other_name: "Masquer les autres langues dans l'éditeur",
         hide_other_desc:
             "Activé : les blocs de langue inactifs sont réduits dans l'éditeur. Désactivé : tous les blocs s'affichent normalement dans l'éditeur.",
+        override_inline_title_name: "Remplacer le titre par le frontmatter",
+        override_inline_title_desc:
+            "Si activé, les notes avec un champ title dans le frontmatter afficheront cette valeur comme titre en ligne. Utilisez title_<code> pour les variantes par langue (ex. title_en).",
         show_lang_header_name: "Sélecteur de langue en mode lecture",
         show_lang_header_desc: "Affiche une barre de sélection de langue en haut de chaque note en mode lecture.",
         show_ribbon_name: "Afficher l'icône dans la barre latérale",

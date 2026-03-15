@@ -50,6 +50,9 @@ const zhTW = {
         hide_other_name: "編輯時隱藏非當前語言的多語段",
         hide_other_desc:
             "開啟時：在編輯模式中，非當前激活語言的內容將被摺疊收起。關閉時：始終顯示所有語言的源碼",
+        override_inline_title_name: "使用 frontmatter 覆蓋筆記標題",
+        override_inline_title_desc:
+            "開啟後，含有 title 欄位的筆記將以 frontmatter 中的值取代頂部大標題。其他語言標題使用 title_<語言碼>（如 title_en）。插件預設語言使用 title 欄位。",
         show_lang_header_name: "閱讀模式頂部多語切換欄",
         show_lang_header_desc: "在閱讀模式下，自動為雙語/多語筆記頂部添加語言選擇欄",
         show_ribbon_name: "顯示側邊欄圖標",

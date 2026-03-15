@@ -68,6 +68,9 @@ const en = {
     hide_other_name: "Hide other languages in editor",
     hide_other_desc:
       "When ON: non-active language blocks are collapsed to a thin bar in editing mode — you can only type in the current language. When OFF: all language blocks are shown normally in the editor so you can freely read and edit every translation.",
+    override_inline_title_name: "Override note title from frontmatter",
+    override_inline_title_desc:
+      "When enabled, notes with a 'title' frontmatter field will display that value as the inline title instead of the filename. Use 'title_<lang>' for per-language variants (e.g. 'title_en'). The base 'title' is used for the plugin's default language.",
     show_lang_header_name: "Show language switcher in reading mode",
     show_lang_header_desc: "Displays a language selector bar at the top of each multilingual note in reading mode.",
     show_ribbon_name: "Show ribbon button",

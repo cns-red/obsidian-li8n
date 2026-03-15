@@ -48,6 +48,9 @@ const ja = {
         hide_other_name: "エディターで他の言語を非表示にする",
         hide_other_desc:
             "オンの場合：現在のアクティブな言語以外のコンテンツはエディターで折りたたまれます。オフの場合：すべての言語のソースコードがエディターに表示されます。",
+        override_inline_title_name: "フロントマターでノートのタイトルを上書き",
+        override_inline_title_desc:
+            "有効にすると、title フィールドを持つノートのインラインタイトルがファイル名の代わりにフロントマターの値で表示されます。他言語は title_<コード>（例：title_en）で指定します。",
         show_lang_header_name: "読書モードの上部に言語スイッチャーを表示",
         show_lang_header_desc: "読書モードの際、多言語ノートの上部に言語選択バーを自動追加します。",
         show_ribbon_name: "リボンアイコンを表示",

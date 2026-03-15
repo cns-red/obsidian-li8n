@@ -44,6 +44,9 @@ const ko = {
         hide_other_name: "편집기에서 다른 언어 숨기기",
         hide_other_desc:
             "켜기: 편집 모드에서 현재 언어가 아닌 콘텐츠가 접혀집니다. 끄기: 편집기에 모든 언어의 소스 코드가 표시됩니다.",
+        override_inline_title_name: "프론트매터로 노트 제목 재정의",
+        override_inline_title_desc:
+            "활성화하면 title 필드가 있는 노트의 인라인 제목이 파일명 대신 프론트매터 값으로 표시됩니다. 다른 언어는 title_<코드>(예: title_en)로 지정합니다.",
         show_lang_header_name: "읽기 모드 상단에 언어 선택기 표시",
         show_lang_header_desc: "읽기 모드일 때 다국어 노트 상단에 언어 선택 막대를 자동으로 추가합니다.",
         show_ribbon_name: "리본 아이콘 표시",

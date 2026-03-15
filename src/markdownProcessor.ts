@@ -344,10 +344,10 @@ export function applyInlineTitleOverride(
   const file = plugin.app.vault.getFileByPath(sourcePath);
   if (!file) return;
 
-  const fm = plugin.app.metadataCache.getFileCache(file)?.frontmatter;
-  if (!fm?.lang) return; // Not a multilingual note
+  if (!plugin.settings.overrideInlineTitle) return;
 
-  const baseTitle = fm.title as string | undefined;
+  const fm = plugin.app.metadataCache.getFileCache(file)?.frontmatter;
+  const baseTitle = fm?.title as string | undefined;
   if (!baseTitle) return; // No `title` frontmatter → leave the filename as-is
 
   const isDefault =
@@ -356,7 +356,7 @@ export function applyInlineTitleOverride(
 
   const newTitle = isDefault
     ? baseTitle
-    : ((fm[`title_${activeLanguage}`] as string | undefined) ?? baseTitle);
+    : ((fm?.[`title_${activeLanguage}`] as string | undefined) ?? baseTitle);
 
   if (titleEl.textContent !== newTitle) {
     titleEl.textContent = newTitle;

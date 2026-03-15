@@ -69,6 +69,9 @@ const zhCN: MessagesShape = {
     hide_other_name: "在编辑器中隐藏其他语言",
     hide_other_desc:
       "开启：编辑模式下非当前语言会折叠为细条，仅可输入当前语言。关闭：编辑器中显示所有语言块，便于自由阅读和编辑。",
+    override_inline_title_name: "使用 frontmatter 覆盖笔记标题",
+    override_inline_title_desc:
+      "开启后，含有 title 字段的笔记会将顶部大标题替换为 frontmatter 中的值。其他语言标题使用 title_<语言码> 字段（如 title_en）。插件默认语言使用 title 字段。",
     show_lang_header_name: "阅读模式显示语言切换栏",
     show_lang_header_desc: "在阅读模式下，于每篇多语言笔记顶部显示语言选择器。",
     show_ribbon_name: "显示侧边栏按钮",

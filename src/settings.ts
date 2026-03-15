@@ -48,6 +48,8 @@ export interface MultilingualNotesSettings {
   aiApiKey: string;
   aiModel: string;
   aiSystemPrompt: string;
+  /** Override the inline title from frontmatter `title` / `title_<lang>`. */
+  overrideInlineTitle: boolean;
   /** Vault-relative folder paths. Empty = plugin works everywhere. */
   workDirs: string[];
   /** Vault-relative folder paths. Plugin is fully disabled inside these. */
@@ -64,6 +66,7 @@ export const DEFAULT_SETTINGS: MultilingualNotesSettings = {
   ],
   defaultLanguage: "en",
   hideInEditor: true,
+  overrideInlineTitle: true,
   showLangHeader: true,
   showRibbon: true,
   showStatusBar: true,
@@ -185,6 +188,18 @@ export class MultilingualNotesSettingTab extends PluginSettingTab {
           toggle.setValue(this.plugin.settings.showLangHeader);
           toggle.onChange(async (value) => {
             this.plugin.settings.showLangHeader = value;
+            await this.plugin.saveSettings();
+            this.plugin.refreshAllViews();
+          });
+        });
+
+      new Setting(body)
+        .setName(t("settings.override_inline_title_name"))
+        .setDesc(t("settings.override_inline_title_desc"))
+        .addToggle((toggle) => {
+          toggle.setValue(this.plugin.settings.overrideInlineTitle);
+          toggle.onChange(async (value) => {
+            this.plugin.settings.overrideInlineTitle = value;
             await this.plugin.saveSettings();
             this.plugin.refreshAllViews();
           });
