@@ -12,16 +12,32 @@ let isMountPolling = false;
 // on rerender(true) which only re-processes sections currently in the virtual-scroller viewport.
 const elementHandlers = new WeakMap<HTMLElement, (active: string) => void>();
 
+// Tracks which .inline-title elements have already had the rename-guard listeners attached,
+// so we never add them more than once per element lifetime.
+const titlesWithListeners = new WeakSet<HTMLElement>();
+
 /**
  * Re-apply visibility to every previously-registered section element inside `containerEl`.
  * Call this immediately before rerender(true) on language switch so that off-screen DOM
  * sections (outside the virtual-scroller viewport) get the correct state right away.
+ *
+ * Also eagerly updates elements in `pendingMountElements` — sections that Obsidian's
+ * virtual scroller has pre-rendered into a detached fragment but not yet attached to the
+ * live DOM.  Without this pass those elements would mount with a stale visibility class
+ * (set at post-processor time with the old language) and only be corrected one RAF later,
+ * producing the "only part of the block shows / blank then appears" artefact.
  */
 export function sweepSectionVisibility(containerEl: Element, active: string): void {
   containerEl.querySelectorAll<HTMLElement>("[data-mi18n]").forEach((el) => {
     const handler = elementHandlers.get(el);
     if (handler) handler(active);
   });
+
+  // Cover elements that are pre-rendered but haven't entered the live DOM yet.
+  for (const item of pendingMountElements) {
+    const handler = elementHandlers.get(item.el);
+    if (handler) handler(active);
+  }
 }
 
 function pollPendingMounts() {
@@ -331,6 +347,24 @@ function removeCloseMarkerFromElement(el: HTMLElement): void {
  *
  * The "default language" is the plugin-level `settings.defaultLanguage`,
  * NOT the per-file `lang_view`.  When active is "ALL" the base `title` is used.
+ *
+ * ### Rename-guard
+ * `.inline-title` is a `contenteditable` element.  Obsidian attaches a blur
+ * listener that reads its `textContent` and renames the file when the value
+ * differs from the current basename.  Because this function overwrites
+ * `textContent` with a translated title, any click-then-release on that element
+ * would silently rename the file.
+ *
+ * Strategy (better than a hard lock):
+ *  1. Keep `contentEditable="false"` while showing the translated title — prevents
+ *     accidental renames from mere clicks.
+ *  2. On `mousedown`: restore `textContent` to the real file basename and re-enable
+ *     editing.  The user now sees the actual filename and can rename normally.
+ *  3. On `blur` (one tick after Obsidian's own handler): re-apply the translated
+ *     title so it appears again immediately after the user finishes.
+ *
+ * We track our ownership with `data-ml-title-override` and use `titlesWithListeners`
+ * to attach these handlers exactly once per element lifetime.
  */
 export function applyInlineTitleOverride(
   ownerEl: Element,
@@ -344,11 +378,29 @@ export function applyInlineTitleOverride(
   const file = plugin.app.vault.getFileByPath(sourcePath);
   if (!file) return;
 
-  if (!plugin.settings.overrideInlineTitle) return;
+  /**
+   * Undo everything this function previously applied, returning the element to
+   * Obsidian's full control (editable, showing the real file basename).
+   */
+  const clearOverride = () => {
+    if (titleEl.dataset.mlTitleOverride === "1") {
+      delete titleEl.dataset.mlTitleOverride;
+      titleEl.contentEditable = "true";
+      titleEl.textContent = file.basename;
+    }
+  };
+
+  if (!plugin.settings.overrideInlineTitle) {
+    clearOverride();
+    return;
+  }
 
   const fm = plugin.app.metadataCache.getFileCache(file)?.frontmatter;
   const baseTitle = fm?.title as string | undefined;
-  if (!baseTitle) return; // No `title` frontmatter → leave the filename as-is
+  if (!baseTitle) {
+    clearOverride(); // `title` frontmatter was removed — hand control back
+    return;
+  }
 
   const isDefault =
     activeLanguage === "ALL" ||
@@ -360,6 +412,53 @@ export function applyInlineTitleOverride(
 
   if (titleEl.textContent !== newTitle) {
     titleEl.textContent = newTitle;
+  }
+
+  // Always keep the current source path on the element so listeners can resolve
+  // the right file even when Obsidian reuses the same .inline-title DOM node
+  // across navigations within the same leaf (it updates textContent in place
+  // rather than recreating the element, which would make closure-captured
+  // sourcePath / file values stale for every file after the first).
+  titleEl.dataset.mlSourcePath = sourcePath;
+
+  // Attach the rename-guard interaction handlers once per element lifetime.
+  if (!titlesWithListeners.has(titleEl)) {
+    titlesWithListeners.add(titleEl);
+
+    // mousedown fires before the browser focuses the element, so we can swap
+    // the content and re-enable editing before Obsidian sees any input.
+    // Read sourcePath from the data attribute — NOT the stale closure variable —
+    // so this always reflects the file currently displayed in the element.
+    titleEl.addEventListener("mousedown", () => {
+      if (titleEl.dataset.mlTitleOverride !== "1") return; // already in native mode
+      const currentPath = titleEl.dataset.mlSourcePath;
+      const liveFile = currentPath ? plugin.app.vault.getFileByPath(currentPath) : null;
+      delete titleEl.dataset.mlTitleOverride;
+      titleEl.contentEditable = "true";
+      titleEl.textContent = liveFile?.basename ?? "";
+    });
+
+    // After blur: wait one tick so Obsidian's own blur handler (which reads
+    // textContent and may rename the file) runs first, then re-apply our title.
+    // Find ownerEl dynamically so this works even if the sizer was replaced since
+    // the listeners were first attached.
+    titleEl.addEventListener("blur", () => {
+      setTimeout(() => {
+        if (!titleEl.isConnected) return;
+        const currentPath = titleEl.dataset.mlSourcePath;
+        if (!currentPath) return;
+        const currentOwner = titleEl.closest(".markdown-preview-sizer");
+        if (!currentOwner) return;
+        const lang = plugin.getLanguageForElement(titleEl, currentPath);
+        applyInlineTitleOverride(currentOwner, currentPath, lang, plugin);
+      }, 0);
+    });
+  }
+
+  // Set / maintain the non-editable lock while our override is active.
+  if (titleEl.dataset.mlTitleOverride !== "1") {
+    titleEl.dataset.mlTitleOverride = "1";
+    titleEl.contentEditable = "false";
   }
 }
 

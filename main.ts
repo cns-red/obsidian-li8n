@@ -377,6 +377,11 @@ export default class MultilingualNotesPlugin extends Plugin {
       if (leaf.view.getMode() === "preview") {
         const previewEl = leaf.view.containerEl.querySelector(".markdown-preview-view");
         if (previewEl) {
+          // Scroll to top before the sweep so the virtual scroller renders the start of the
+          // newly-active language's content immediately. Different languages have different
+          // lengths; staying at the old scroll offset would leave the viewport aimed at an
+          // empty or wrong-language region until the user manually scrolls back up.
+          (previewEl as HTMLElement).scrollTop = 0;
           sweepSectionVisibility(previewEl, resolvedCode);
           applyInlineTitleOverride(previewEl, filePath, resolvedCode, this);
         }
@@ -411,6 +416,7 @@ export default class MultilingualNotesPlugin extends Plugin {
         const previewEl = view.containerEl.querySelector(".markdown-preview-view");
         const effectiveLang = this.getEffectiveLanguageForLeaf(leaf);
         if (previewEl) {
+          (previewEl as HTMLElement).scrollTop = 0;
           sweepSectionVisibility(previewEl, effectiveLang);
           const fp = view.file?.path ?? "";
           if (fp) applyInlineTitleOverride(previewEl, fp, effectiveLang, this);

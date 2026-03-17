@@ -62,8 +62,14 @@ mi18n automatically keeps these keys in sync — you rarely need to write them m
 lang: [en, zh-CN, ja]   # languages present in this note (auto-synced on save)
 lang_view: zh-CN         # lock this note to a specific language on every open
 lang_ignore: true        # disable mi18n entirely for this note
+title: "My Article"      # shown as the inline title for the default language
+title_zh-CN: "我的文章"  # per-language title variant (title_<lang>)
 ---
 ```
+
+When **Override note title from frontmatter** is enabled (Settings → Interface), mi18n replaces the inline title shown at the top of the note with the value from `title` (or the matching `title_<lang>` variant) instead of the filename. The base `title` is used for the default language and as a fallback for any language that has no dedicated variant.
+
+Clicking the inline title temporarily reveals the real filename so you can rename the file normally — mi18n re-applies the translated title as soon as you finish.
 
 ---
 
@@ -170,6 +176,7 @@ Open **Settings → mi18n**:
 - **Configured languages** — add / rename / remove entries; codes must exactly match your markers
 
 ### Interface
+- **Override note title from frontmatter** — display the `title` / `title_<lang>` frontmatter value as the inline title instead of the filename; clicking the title temporarily restores the filename for renaming
 - **Hide other languages in editor** — collapse inactive blocks to a thin bar in Live Preview / source mode
 - **Show language switcher in reading mode** — toggle the reading-mode pill bar
 - **Show ribbon button** — toggle the left-sidebar icon
