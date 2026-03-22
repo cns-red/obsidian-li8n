@@ -1,6 +1,6 @@
 {
   "name": "obsidian-mi18n",
-  "version": "1.2.0",
+  "version": "1.2.2",
   "repository": {
     "url": "https://github.com/cns-red/obsidian-mi18n"
   },
@@ -25,7 +25,7 @@
     "@typescript-eslint/eslint-plugin": "5.29.0",
     "@typescript-eslint/parser": "5.29.0",
     "@typescript-eslint/utils": "^8.57.0",
-"esbuild": "0.17.3",
+    "esbuild": "0.17.3",
     "eslint": "9",
     "globals": "^17.4.0",
     "obsidian": "latest",
