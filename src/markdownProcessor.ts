@@ -77,10 +77,26 @@ function isVisibleMarkerLine(line: string): boolean {
 }
 
 // Block cache: "sourcePath|quickHash(source)" → parsed blocks.
+// Capped to avoid unbounded memory growth when many files are opened.
+const BLOCK_CACHE_MAX = 64;
 const blockCache = new Map<string, LangBlock[]>();
 
 export function clearBlockCache(): void {
   blockCache.clear();
+}
+
+function cachedParseLangBlocks(sourcePath: string, source: string): LangBlock[] {
+  const key = `${sourcePath}|${quickHash(source)}`;
+  const cached = blockCache.get(key);
+  if (cached) return cached;
+  const parsed = parseLangBlocks(source);
+  if (blockCache.size >= BLOCK_CACHE_MAX) {
+    // Evict the oldest entry (first inserted).
+    const first = blockCache.keys().next().value;
+    if (first !== undefined) blockCache.delete(first);
+  }
+  blockCache.set(key, parsed);
+  return parsed;
 }
 
 function quickHash(str: string): number {
@@ -171,6 +187,158 @@ export function extractAvailableLanguagesFromBlocks(blocks: LangBlock[], configu
   return existing;
 }
 
+/**
+ * Find the language block that owns a given section line range.
+ *
+ * Returns the matched block plus a tag indicating which part of the block this
+ * section represents, or `null` when the section falls outside every block.
+ *
+ * The lookup considers not just `lineStart` but also `lineEnd`, so sections
+ * that span across a block boundary (rare, but possible with certain syntax
+ * styles) are still detected.
+ */
+function findBlockForSection(
+  blocks: LangBlock[],
+  lineStart: number,
+  lineEnd: number,
+): { block: LangBlock; role: "open" | "close" | "inside" } | null {
+  for (const block of blocks) {
+    // Section starts at the open-marker line
+    if (lineStart === block.openLine) {
+      return { block, role: "open" };
+    }
+
+    // Section starts at the close-marker line
+    if (block.closeLine >= 0 && lineStart === block.closeLine) {
+      return { block, role: "close" };
+    }
+
+    // Section is fully inside the block
+    if (
+      lineStart > block.openLine &&
+      (block.closeLine < 0 || lineStart < block.closeLine)
+    ) {
+      return { block, role: "inside" };
+    }
+
+    // Section starts before the block but extends into it (boundary overlap)
+    if (lineStart < block.openLine && lineEnd >= block.openLine) {
+      return { block, role: "inside" };
+    }
+  }
+  return null;
+}
+
+/**
+ * Build the `evaluateVisibility` closure for a single rendered section.
+ *
+ * This is the heart of reading-mode language filtering.  Every rendered
+ * `.markdown-preview-section` child element gets one of these closures which
+ * is called (a) at initial render time and (b) every time the active language
+ * changes (via `sweepSectionVisibility`).
+ */
+function buildEvaluateVisibility(
+  blocks: LangBlock[],
+  lineStart: number,
+  lineEnd: number,
+  defaultLang: string,
+  el: HTMLElement,
+): (active: string) => void {
+  // ── No language blocks in the document ────────────────────────────────
+  if (blocks.length === 0) {
+    return (active: string) => {
+      if (active !== "ALL" && active.toLowerCase() !== defaultLang.toLowerCase()) {
+        el.classList.add("ml-language-hidden");
+      } else {
+        el.classList.remove("ml-language-hidden");
+      }
+    };
+  }
+
+  // ── Match this section to a block ─────────────────────────────────────
+  const match = findBlockForSection(blocks, lineStart, lineEnd);
+
+  if (match) {
+    const { block, role } = match;
+
+    if (role === "open") {
+      const hasContent = lineEnd > block.openLine;
+      return (active: string) => {
+        if (hasContent) {
+          // Section contains block content (marker + text in same section).
+          // Always apply visibility regardless of marker visibility.
+          const isActive = active === "ALL" || langMatch(block.langCode, active);
+          if (isActive) el.classList.remove("ml-language-hidden");
+          else el.classList.add("ml-language-hidden");
+        } else {
+          // Section is only the marker line itself.
+          // Visible markers (:::) → always hide; invisible markers → no-op
+          // (they render as empty elements).
+          if (block.openVisible) {
+            el.classList.add("ml-language-hidden");
+          }
+        }
+      };
+    }
+
+    if (role === "close") {
+      const hasContent = lineEnd > block.closeLine || lineStart < block.closeLine;
+      return (active: string) => {
+        if (hasContent) {
+          // Section contains block content AND the close marker.
+          const isActive = active === "ALL" || langMatch(block.langCode, active);
+          if (isActive) {
+            el.classList.remove("ml-language-hidden");
+            removeCloseMarkerFromElement(el);
+          } else {
+            el.classList.add("ml-language-hidden");
+          }
+        } else {
+          // Section is only the close-marker line.
+          if (block.closeVisible) {
+            el.classList.add("ml-language-hidden");
+          }
+        }
+      };
+    }
+
+    // role === "inside"
+    return (active: string) => {
+      const isActive = active === "ALL" || langMatch(block.langCode, active);
+      if (!isActive) {
+        el.classList.add("ml-language-hidden");
+      } else {
+        el.classList.remove("ml-language-hidden");
+        if (block.closeLine >= 0 && lineEnd >= block.closeLine) {
+          removeCloseMarkerFromElement(el);
+        }
+      }
+    };
+  }
+
+  // ── Section is outside all language blocks ────────────────────────────
+  // In a multilingual document, unblocked content is treated as belonging
+  // to the default language so it does not leak into other language views.
+  // Exception: content *before* the very first block (frontmatter area,
+  // document metadata) is always visible — only content after the first
+  // block marker is subject to this rule.
+  const firstBlockStart = blocks[0].openLine;
+  if (lineStart >= firstBlockStart) {
+    return (active: string) => {
+      if (active === "ALL" || active.toLowerCase() === defaultLang.toLowerCase()) {
+        el.classList.remove("ml-language-hidden");
+      } else {
+        el.classList.add("ml-language-hidden");
+      }
+    };
+  }
+
+  // Content before the first block — always visible (frontmatter, shared intro).
+  return (active: string) => {
+    el.classList.remove("ml-language-hidden");
+  };
+}
+
 export function registerReadingModeProcessor(plugin: MultilingualNotesPlugin): void {
   plugin.registerMarkdownPostProcessor(
     (el: HTMLElement, ctx: MarkdownPostProcessorContext) => {
@@ -185,66 +353,11 @@ export function registerReadingModeProcessor(plugin: MultilingualNotesPlugin): v
       const defaultLang = plugin.settings.defaultLanguage;
       const showLangHeader = plugin.settings.showLangHeader;
 
-      const cacheKey = `${ctx.sourcePath}|${quickHash(source)}`;
-      const blocks = blockCache.get(cacheKey) || (() => {
-        const parsed = parseLangBlocks(source);
-        blockCache.set(cacheKey, parsed);
-        return parsed;
-      })();
+      const blocks = cachedParseLangBlocks(ctx.sourcePath, source);
 
-      let evaluateVisibility = (active: string) => {
-        el.classList.remove("ml-language-hidden");
-      };
-
-      if (blocks.length === 0) {
-        evaluateVisibility = (active: string) => {
-          if (active !== "ALL" && !langMatch(active, defaultLang)) {
-            el.classList.add("ml-language-hidden");
-          } else {
-            el.classList.remove("ml-language-hidden");
-          }
-        };
-      } else {
-        for (const block of blocks) {
-          if (lineStart === block.openLine) {
-            evaluateVisibility = (active: string) => {
-              if (!block.openVisible) return;
-              const isActive = active === "ALL" || langMatch(block.langCode, active);
-              if (lineEnd > block.openLine) {
-                if (isActive) el.classList.remove("ml-language-hidden");
-                else el.classList.add("ml-language-hidden");
-                return;
-              }
-              el.classList.add("ml-language-hidden");
-            };
-            break;
-          }
-
-          if (block.closeLine >= 0 && lineStart === block.closeLine) {
-            evaluateVisibility = (active: string) => {
-              if (block.closeVisible) el.classList.add("ml-language-hidden");
-            };
-            break;
-          }
-
-          const afterOpen = lineStart > block.openLine;
-          const beforeClose = block.closeLine < 0 || lineStart < block.closeLine;
-          if (afterOpen && beforeClose) {
-            evaluateVisibility = (active: string) => {
-              const isActive = active === "ALL" || langMatch(block.langCode, active);
-              if (!isActive) {
-                el.classList.add("ml-language-hidden");
-              } else {
-                el.classList.remove("ml-language-hidden");
-                if (block.closeLine >= 0 && lineEnd >= block.closeLine) {
-                  removeCloseMarkerFromElement(el);
-                }
-              }
-            };
-            break;
-          }
-        }
-      }
+      const evaluateVisibility = buildEvaluateVisibility(
+        blocks, lineStart, lineEnd, defaultLang, el,
+      );
 
       // Register handler so sweepSectionVisibility can directly update this element
       // when the active language changes (handles off-screen virtual-scroller sections).

@@ -138,7 +138,9 @@ export default class MultilingualNotesPlugin extends Plugin {
         // refreshAllViews() during setup would corrupt the primary leaf's
         // language state before the secondary leaf overrides are registered.
         if (this.compareManager.isSettingUp) return;
-        clearBlockCache();
+        // Block cache is keyed by content hash, so stale entries are never
+        // returned — no need to clear on every layout-change.  Only clear
+        // when content actually changes (editor-change) or settings change.
         this.refreshAllViews();
         setTimeout(() => this.filterOutlineView(), 0);
       })
@@ -368,22 +370,17 @@ export default class MultilingualNotesPlugin extends Plugin {
     }
 
     // Apply to the exact leaf only — never touch other leaves to keep compare splits isolated.
-    // Sweep is sufficient: it immediately updates every section already in the DOM.
-    // Sections not yet rendered (virtual-scroller lazy load) will pick up the correct
-    // language from getLanguageForElement when the post-processor runs on first entry.
-    // rerender(true) is intentionally omitted — it clears all rendered sections and restarts
-    // async rendering, which causes the "empty or half content" flash on long notes.
     if (leaf.view instanceof MarkdownView) {
       if (leaf.view.getMode() === "preview") {
         const previewEl = leaf.view.containerEl.querySelector(".markdown-preview-view");
         if (previewEl) {
-          // Scroll to top before the sweep so the virtual scroller renders the start of the
-          // newly-active language's content immediately. Different languages have different
-          // lengths; staying at the old scroll offset would leave the viewport aimed at an
-          // empty or wrong-language region until the user manually scrolls back up.
           (previewEl as HTMLElement).scrollTop = 0;
+          // Sweep first for immediate visual feedback on in-DOM sections,
+          // then force a full rerender so the virtual scroller's off-screen
+          // cached sections are rebuilt with the correct language.
           sweepSectionVisibility(previewEl, resolvedCode);
           applyInlineTitleOverride(previewEl, filePath, resolvedCode, this);
+          (leaf.view as MarkdownView).previewMode.rerender(true);
         }
       } else {
         const cm = (leaf.view.editor as unknown as { cm?: { dispatch: (tr: unknown) => void } })?.cm;
@@ -404,9 +401,9 @@ export default class MultilingualNotesPlugin extends Plugin {
   }
 
   /**
-   * Directly re-apply visibility to every in-DOM section across all leaves without triggering
-   * a full rerender. Used for language switches where rerender(true) would clear all rendered
-   * sections and restart async rendering — causing empty / half-content on long notes.
+   * Re-apply language visibility across all leaves.  Sweep first for instant
+   * visual feedback, then rerender(true) to rebuild cached off-screen sections
+   * that the sweep cannot reach.
    */
   private applyLanguageSweep(): void {
     this.app.workspace.iterateAllLeaves((leaf: WorkspaceLeaf) => {
@@ -421,6 +418,7 @@ export default class MultilingualNotesPlugin extends Plugin {
           const fp = view.file?.path ?? "";
           if (fp) applyInlineTitleOverride(previewEl, fp, effectiveLang, this);
         }
+        view.previewMode.rerender(true);
         return;
       }
       const cm = (view.editor as unknown as { cm?: { dispatch: (tr: unknown) => void } })?.cm;
