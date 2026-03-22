@@ -1,0 +1,30 @@
+# CNB (Cloud Native Build) pipeline
+# Mirrors the GitHub Actions release workflow (.github/workflows/release.yml).
+# Triggered on any tag push: installs with Bun, bumps version files,
+# builds the plugin, then publishes a release with the three plugin artefacts.
+
+$:
+  tag_push:
+    - name: Release Obsidian plugin
+      docker:
+        image: oven/bun:latest
+      stages:
+        - name: Install dependencies
+          script: bun install --frozen-lockfile
+
+        - name: Sync version files from tag
+          script: node version-bump.mjs $CNB_TAG_NAME
+
+        - name: Build plugin
+          script: bun run build
+
+        - name: Publish release
+          type: git:release
+          options:
+            tag: $CNB_TAG_NAME
+            title: $CNB_TAG_NAME
+            latest: true
+            attachments:
+              - main.js
+              - manifest.json
+              - styles.css
